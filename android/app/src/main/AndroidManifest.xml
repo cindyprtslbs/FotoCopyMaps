@@ -1,15 +1,20 @@
-<?xml version="1.0" encoding="utf-8"?>
+<!-- android/app/src/main/AndroidManifest.xml -->
+<!-- REPLACE seluruh isi file AndroidManifest.xml kamu dengan ini -->
+
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Internet -->
+    <!-- ── Izin yang dibutuhkan ─────────────────── -->
+    <!-- Internet untuk akses Supabase API -->
     <uses-permission android:name="android.permission.INTERNET"/>
 
-    <!-- GPS / Location -->
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <!-- GPS kasar (WiFi/cell) -->
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 
+    <!-- GPS presisi (lebih akurat) -->
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+
     <application
-        android:label="fotocopy_app"
+        android:label="Campus Directory"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher"
         android:usesCleartextTraffic="true">
@@ -24,43 +29,29 @@
             android:hardwareAccelerated="true"
             android:windowSoftInputMode="adjustResize">
 
-            <!-- Theme saat Flutter loading -->
-            <meta-data
-                android:name="io.flutter.embedding.android.NormalTheme"
-                android:resource="@style/NormalTheme"/>
-
-            <intent-filter>
+            <!-- Untuk url_launcher: buka Google Maps dari app -->
+            <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
-
         </activity>
 
-        <!-- Flutter embedding -->
+        <!-- Provider untuk file (dibutuhkan beberapa plugin) -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2"/>
     </application>
 
+    <!-- Needed for url_launcher to open geo: and https: URIs -->
     <queries>
-
-        <!-- Flutter Process Text -->
-        <intent>
-            <action android:name="android.intent.action.PROCESS_TEXT"/>
-            <data android:mimeType="text/plain"/>
-        </intent>
-
-        <!-- Google Maps / Browser -->
-        <intent>
-            <action android:name="android.intent.action.VIEW"/>
-            <data android:scheme="https"/>
-        </intent>
-
         <intent>
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="geo"/>
         </intent>
-
+        <intent>
+            <action android:name="android.intent.action.VIEW"/>
+            <data android:scheme="https"/>
+        </intent>
     </queries>
 
 </manifest>

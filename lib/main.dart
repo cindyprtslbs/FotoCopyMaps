@@ -1,17 +1,20 @@
+// lib/main.dart
+
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'utils/constants.dart';
+// import 'screens/home/home_screen.dart';
+import 'screens/auth/login_screen.dart';
+import 'services/supabase_service.dart';
+import 'screens/map/map_screen.dart';
 
-import 'screens/splash_screen.dart';
-
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Status bar transparan
-  SystemChrome.setSystemUIOverlayStyle(
-    const SystemUiOverlayStyle(
-      statusBarColor: Colors.transparent,
-      statusBarIconBrightness: Brightness.dark,
-    ),
+  // Inisialisasi Supabase — wajib sebelum runApp
+  await Supabase.initialize(
+    url: AppConstants.supabaseUrl,
+    anonKey: AppConstants.supabaseAnonKey,
   );
 
   runApp(const FotoCopyFinder());
@@ -23,18 +26,63 @@ class FotoCopyFinder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'FotoCopyFinder',
+      title: AppConstants.appName,
       debugShowCheckedModeBanner: false,
+
+      // ── Theme ──────────────────────────────────────
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF4A90D9),
-        ),
         useMaterial3: true,
-        fontFamily: 'Roboto',
-        scaffoldBackgroundColor: const Color(0xFFF4F7FC),
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF1D4ED8), // biru kampus
+          brightness: Brightness.light,
+        ),
+        appBarTheme: const AppBarTheme(
+          centerTitle: true,
+          elevation: 0,
+          scrolledUnderElevation: 1,
+        ),
+        cardTheme: CardTheme(
+          elevation: 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+            side: BorderSide(color: Colors.grey.shade200),
+          ),
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          filled: true,
+          fillColor: Colors.grey.shade50,
+        ),
       ),
-      // Entry point: SplashScreen yang handle GPS permission
-      home: const SplashScreen(),
+
+      // ── Routing ────────────────────────────────────
+      home: const AppRouter(),
+    );
+  }
+}
+
+/// Cek apakah user sudah login, lalu arahkan ke screen yang sesuai.
+/// Jika aplikasimu tidak pakai auth, ganti langsung ke HomeScreen().
+class AppRouter extends StatelessWidget {
+  const AppRouter({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    final service = SupabaseService();
+
+    // Jika TIDAK pakai auth, hapus StreamBuilder ini dan kembalikan langsung:
+    // return const HomeScreen();
+    return StreamBuilder<AuthState>(
+      stream: service.authStateChanges,
+      builder: (context, snapshot) {
+        final session = Supabase.instance.client.auth.currentSession;
+        if (session != null) {
+          return const MapScreen();
+        }
+        return const LoginScreen();
+      },
     );
   }
 }

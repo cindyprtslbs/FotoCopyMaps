@@ -1,93 +1,115 @@
+// lib/services/location_service.dart
+//
+// Semua urusan GPS dan kalkulasi jarak ada di sini.
+
 import 'package:geolocator/geolocator.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../models/place_model.dart';
 
-/// Hasil dari request lokasi — bisa berhasil, ditolak, atau GPS mati.
-sealed class LocationResult {}
-
-class LocationSuccess extends LocationResult {
-  final Position position;
-  LocationSuccess(this.position);
-}
-
-class LocationDenied extends LocationResult {
-  final String message;
-  LocationDenied(this.message);
-}
-
-class LocationServiceDisabled extends LocationResult {}
-
-/// Service untuk mengambil lokasi pengguna dengan penanganan error lengkap.
 class LocationService {
-  /// Minta permission lalu ambil posisi saat ini.
-  static Future<LocationResult> getCurrentLocation() async {
-    print('LocationService.getCurrentLocation: start');
+  static final LocationService _instance = LocationService._internal();
+  factory LocationService() => _instance;
+  LocationService._internal();
 
-    // 1. Cek apakah GPS aktif
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    print('LocationService: serviceEnabled=$serviceEnabled');
+  Position? _lastPosition;
+  Position? get lastPosition => _lastPosition;
+
+  /// Minta izin GPS dan ambil lokasi pengguna.
+  /// Mengembalikan null jika ditolak atau GPS mati.
+  Future<Position?> getCurrentLocation() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      return LocationServiceDisabled();
+      return null; // GPS mati di device
     }
 
-    // 2. Cek permission
-    LocationPermission permission =
-        await Geolocator.checkPermission();
-
+    LocationPermission permission = await Geolocator.checkPermission();
     if (permission == LocationPermission.denied) {
-      print('LocationService: permission currently denied, requesting');
       permission = await Geolocator.requestPermission();
-      print('LocationService: permission after request=$permission');
       if (permission == LocationPermission.denied) {
-        return LocationDenied(
-          'Izin lokasi ditolak. Aktifkan di pengaturan aplikasi.',
-        );
+        return null; // User menolak izin
       }
     }
 
     if (permission == LocationPermission.deniedForever) {
-      print('LocationService: permission deniedForever');
-      return LocationDenied(
-        'Izin lokasi diblokir permanen. Buka Pengaturan → Izin Aplikasi → Lokasi.',
-      );
+      return null; // User menolak permanen → arahkan ke settings
     }
 
-    // 3. Ambil posisi
     try {
       final position = await Geolocator.getCurrentPosition(
-        locationSettings: const LocationSettings(
-          accuracy: LocationAccuracy.high,
-          timeLimit: Duration(seconds: 10),
-        ),
+        desiredAccuracy: LocationAccuracy.high,
+        timeLimit: const Duration(seconds: 10),
       );
-      print('LocationService: got position ${position.latitude}, ${position.longitude}');
-      return LocationSuccess(position);
+      _lastPosition = position;
+      return position;
     } catch (e) {
-      print('LocationService: error getting position: ${e.toString()}');
-      return LocationDenied(
-        'Gagal mendapatkan lokasi: ${e.toString()}',
-      );
+      return null;
     }
   }
 
-  /// Hitung jarak antara user dan tempat (dalam meter).
-  static double distanceBetween({
-    required double userLat,
-    required double userLng,
-    required double placeLat,
-    required double placeLng,
-  }) {
+  /// Hitung jarak antara posisi pengguna dan sebuah tempat (dalam meter)
+  double? distanceTo(Place place) {
+    if (_lastPosition == null) return null;
     return Geolocator.distanceBetween(
-      userLat,
-      userLng,
-      placeLat,
-      placeLng,
+      _lastPosition!.latitude,
+      _lastPosition!.longitude,
+      place.lat,
+      place.lng,
     );
   }
 
-  /// Format jarak jadi string yang ramah dibaca.
-  static String formatDistance(double meters) {
-    if (meters < 1000) {
-      return '${meters.toInt()} m';
+  /// Hitung jarak antara dua koordinat
+  double distanceBetween(
+    double startLat, double startLng,
+    double endLat, double endLng,
+  ) {
+    return Geolocator.distanceBetween(startLat, startLng, endLat, endLng);
+  }
+
+  /// Buka rute di Google Maps (intent URL)
+  Future<bool> openRoute({
+    required double destLat,
+    required double destLng,
+    double? originLat,
+    double? originLng,
+  }) async {
+    final origin = (originLat != null && originLng != null)
+        ? '${originLat.toStringAsFixed(6)},${originLng.toStringAsFixed(6)}'
+        : '';
+
+    // Coba Google Maps dulu
+    final googleMapsUrl = Uri.parse(
+      'https://www.google.com/maps/dir/$origin/'
+      '${destLat.toStringAsFixed(6)},${destLng.toStringAsFixed(6)}',
+    );
+
+    // Fallback: geo: URI (buka di app peta apapun yang tersedia)
+    final geoUrl = Uri.parse(
+      'geo:${destLat.toStringAsFixed(6)},${destLng.toStringAsFixed(6)}'
+      '?q=${destLat.toStringAsFixed(6)},${destLng.toStringAsFixed(6)}',
+    );
+
+    if (await canLaunchUrl(googleMapsUrl)) {
+      return await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
+    } else if (await canLaunchUrl(geoUrl)) {
+      return await launchUrl(geoUrl, mode: LaunchMode.externalApplication);
     }
-    return '${(meters / 1000).toStringAsFixed(1)} km';
+    return false;
+  }
+
+  /// Urutkan list tempat berdasarkan jarak dari posisi pengguna
+  List<Place> sortByDistance(List<Place> places) {
+    if (_lastPosition == null) return places;
+
+    for (var place in places) {
+      place.distanceMeters = distanceTo(place);
+    }
+
+    final sorted = List<Place>.from(places);
+    sorted.sort((a, b) {
+      if (a.distanceMeters == null) return 1;
+      if (b.distanceMeters == null) return -1;
+      return a.distanceMeters!.compareTo(b.distanceMeters!);
+    });
+    return sorted;
   }
 }

@@ -1,25 +1,37 @@
 class Review {
   final int id;
   final int placeId;
-  final int userId;
+  final String? userId;
   final double rating;
-  final String comment;
+  final String? comment;
+  final DateTime? createdAt;
 
-  Review({
+  const Review({
     required this.id,
     required this.placeId,
-    required this.userId,
+    this.userId,
     required this.rating,
-    required this.comment,
+    this.comment,
+    this.createdAt,
   });
 
   factory Review.fromJson(Map<String, dynamic> json) {
     return Review(
-      id:      int.parse(json['id'].toString()),
-      placeId: int.parse(json['place_id'].toString()),
-      userId:  int.parse((json['user_id'] ?? '0').toString()),
-      rating:  double.parse(json['rating'].toString()),
-      comment: json['comment'] ?? '',
+      id: json['id'] as int,
+      placeId: json['place_id'] as int,
+      userId: json['user_id'] as String?,
+      rating: (json['rating'] as num).toDouble(),
+      comment: json['comment'] as String?,
+      createdAt: json['created_at'] != null
+          ? DateTime.parse(json['created_at'] as String)
+          : null,
     );
   }
+
+  Map<String, dynamic> toJson() => {
+        'place_id': placeId,
+        'user_id': userId,
+        'rating': rating,
+        'comment': comment,
+      };
 }
