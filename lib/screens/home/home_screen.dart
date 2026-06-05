@@ -106,7 +106,7 @@ class _HomeScreenState extends State<HomeScreen> {
       appBar: AppBar(
         backgroundColor: scheme.surface,
         title: const Text(
-          '🏛️ Campus Directory',
+          'Foto Copy Finder',
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         actions: [
