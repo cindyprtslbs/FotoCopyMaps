@@ -1,7 +1,4 @@
 // lib/screens/home/home_screen.dart
-//
-// Layar utama: daftar tempat + filter kategori + search.
-// Navigasi ke MapScreen dan DetailScreen dari sini.
 
 import 'package:flutter/material.dart';
 import '../../models/place_model.dart';
@@ -22,6 +19,127 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
+  int _currentIndex = 0;
+
+  final List<Widget> _screens = const [
+    _HomeTab(),
+    _FavoriteTab(),
+    _ProfileTab(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
+      bottomNavigationBar: _BottomNav(
+        currentIndex: _currentIndex,
+        onTap: (i) => setState(() => _currentIndex = i),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// BOTTOM NAV
+// ─────────────────────────────────────────────────────────
+class _BottomNav extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onTap;
+  const _BottomNav({required this.currentIndex, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    const primary = Color(0xFF3B6FE8);
+    const items = [
+      {'icon': Icons.home_rounded, 'label': 'Home'},
+      {'icon': Icons.favorite_rounded, 'label': 'Favorite'},
+      {'icon': Icons.person_rounded, 'label': 'Profile'},
+    ];
+
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 20,
+            offset: const Offset(0, -4),
+          ),
+        ],
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 64,
+          child: Row(
+            children: List.generate(items.length, (i) {
+              final isSelected = i == currentIndex;
+              final icon = items[i]['icon'] as IconData;
+              final label = items[i]['label'] as String;
+
+              return Expanded(
+                child: GestureDetector(
+                  onTap: () => onTap(i),
+                  behavior: HitTestBehavior.opaque,
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        AnimatedContainer(
+                          duration: const Duration(milliseconds: 200),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: isSelected
+                                ? primary.withOpacity(0.12)
+                                : Colors.transparent,
+                            borderRadius: BorderRadius.circular(20),
+                          ),
+                          child: Icon(
+                            icon,
+                            color: isSelected ? primary : Colors.grey.shade400,
+                            size: 24,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: isSelected
+                                ? FontWeight.w600
+                                : FontWeight.normal,
+                            color: isSelected ? primary : Colors.grey.shade400,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// HOME TAB
+// ─────────────────────────────────────────────────────────
+class _HomeTab extends StatefulWidget {
+  const _HomeTab();
+
+  @override
+  State<_HomeTab> createState() => _HomeTabState();
+}
+
+class _HomeTabState extends State<_HomeTab> {
   final _supabase = SupabaseService();
   final _location = LocationService();
   final _searchController = TextEditingController();
@@ -30,7 +148,6 @@ class _HomeScreenState extends State<HomeScreen> {
   List<Category> _categories = [];
   int? _selectedCategoryId;
   bool _isLoading = true;
-  bool _locationLoaded = false;
   String? _error;
 
   @override
@@ -49,31 +166,21 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final cats = await _supabase.getCategories();
       if (mounted) setState(() => _categories = cats);
-    } catch (e) {
-      // kategori gagal tidak fatal
-    }
+    } catch (_) {}
   }
 
   Future<void> _loadLocation() async {
     await _location.getCurrentLocation();
-    if (mounted) setState(() => _locationLoaded = true);
   }
 
   Future<void> _loadPlaces({String? search}) async {
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
+    if (mounted) setState(() { _isLoading = true; _error = null; });
     try {
       var places = await _supabase.getPlaces(
         categoryId: _selectedCategoryId,
         search: search,
       );
-
-      // Hitung & isi jarak, lalu urutkan
       places = _location.sortByDistance(places);
-
       if (mounted) setState(() => _places = places);
     } catch (e) {
       if (mounted) setState(() => _error = e.toString());
@@ -87,10 +194,6 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadPlaces(search: _searchController.text);
   }
 
-  void _onSearch(String value) {
-    _loadPlaces(search: value);
-  }
-
   @override
   void dispose() {
     _searchController.dispose();
@@ -99,78 +202,168 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final user = SupabaseService().currentUser;
+    final email = user?.email ?? 'Pengguna';
+    final name = email.split('@').first;
 
     return Scaffold(
-      backgroundColor: scheme.surface,
-      appBar: AppBar(
-        backgroundColor: scheme.surface,
-        title: const Text(
-          'Foto Copy Finder',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.map_outlined),
-            tooltip: 'Lihat Peta',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => MapScreen(places: _places),
-                ),
-              );
-            },
-          ),
-          // Tambah tombol logout
-          IconButton(
-            icon: const Icon(Icons.logout),
-            tooltip: 'Logout',
-            onPressed: () async {
-              await SupabaseService().signOut();
-              if (context.mounted) {
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(builder: (_) => const LoginScreen()),
-                );
-              }
-            },
-          ),
-        ],
-      ),
-
+      backgroundColor: const Color(0xFFF5F7FF),
       body: RefreshIndicator(
         onRefresh: _init,
+        color: const Color(0xFF3B6FE8),
         child: CustomScrollView(
           slivers: [
-            // ── Search bar ──────────────────────────
+            // ── Header Gradient ──────────────────────
             SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-                child: TextField(
-                  controller: _searchController,
-                  onSubmitted: _onSearch,
-                  onChanged: (v) {
-                    if (v.isEmpty) _loadPlaces();
-                  },
-                  decoration: InputDecoration(
-                    hintText: 'Cari tempat…',
-                    prefixIcon: const Icon(Icons.search),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            icon: const Icon(Icons.clear),
-                            onPressed: () {
-                              _searchController.clear();
-                              _loadPlaces();
-                            },
-                          )
-                        : null,
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF3B6FE8), Color(0xFF1CB8C8)],
                   ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(28),
+                    bottomRight: Radius.circular(28),
+                  ),
+                ),
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).padding.top + 16,
+                  left: 20,
+                  right: 20,
+                  bottom: 28,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Halo, $name 👋',
+                                style: const TextStyle(
+                                  fontSize: 22,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                'Temukan tempat di sekitar kampus',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Colors.white70,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Tombol peta
+                        GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => MapScreen(places: _places),
+                            ),
+                          ),
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.2),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: const Icon(
+                              Icons.map_outlined,
+                              color: Colors.white,
+                              size: 22,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Search bar di dalam header
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(14),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.08),
+                            blurRadius: 12,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: TextField(
+                        controller: _searchController,
+                        onSubmitted: (value) => _loadPlaces(search: value),
+                        onChanged: (v) {
+                          if (v.isEmpty) _loadPlaces();
+                          setState(() {});
+                        },
+                        style: const TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF1A1A2E),
+                        ),
+                        decoration: InputDecoration(
+                          hintText: 'Cari tempat…',
+                          hintStyle: TextStyle(
+                            color: Colors.grey.shade400,
+                            fontSize: 14,
+                          ),
+                          prefixIcon: Icon(
+                            Icons.search,
+                            color: Colors.grey.shade400,
+                          ),
+                          suffixIcon: _searchController.text.isNotEmpty
+                              ? IconButton(
+                                  icon: Icon(Icons.clear,
+                                      color: Colors.grey.shade400),
+                                  onPressed: () {
+                                    _searchController.clear();
+                                    _loadPlaces();
+                                    setState(() {});
+                                  },
+                                )
+                              : null,
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide.none,
+                          ),
+                          enabledBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: BorderSide.none,
+                          ),
+                          focusedBorder: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(14),
+                            borderSide: const BorderSide(
+                              color: Color(0xFF3B6FE8),
+                              width: 1.5,
+                            ),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 14,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
 
-            // ── Filter kategori ──────────────────────
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+            // ── Filter Kategori ──────────────────────
             if (_categories.isNotEmpty)
               SliverToBoxAdapter(
                 child: SizedBox(
@@ -179,7 +372,6 @@ class _HomeScreenState extends State<HomeScreen> {
                     scrollDirection: Axis.horizontal,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     children: [
-                      // Chip "Semua"
                       CategoryChip(
                         label: 'Semua',
                         icon: '🗺️',
@@ -197,41 +389,68 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 8)),
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
 
-            // ── Konten utama ─────────────────────────
+            // ── Label section ────────────────────────
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      'Tempat Terdekat',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Color(0xFF1A1A2E),
+                      ),
+                    ),
+                    if (!_isLoading)
+                      Text(
+                        '${_places.length} tempat',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Colors.grey.shade500,
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+
+            // ── Konten ───────────────────────────────
             if (_isLoading)
               const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
+                child: Center(
+                  child: CircularProgressIndicator(
+                    color: Color(0xFF3B6FE8),
+                  ),
+                ),
               )
             else if (_error != null)
               SliverFillRemaining(
-                child: _ErrorView(
-                  message: _error!,
-                  onRetry: _init,
-                ),
+                child: _ErrorView(message: _error!, onRetry: _init),
               )
             else if (_places.isEmpty)
-              const SliverFillRemaining(
-                child: _EmptyView(),
-              )
+              const SliverFillRemaining(child: _EmptyView())
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 100),
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       final place = _places[index];
                       return PlaceCard(
                         place: place,
-                        onTap: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => DetailScreen(place: place),
-                            ),
-                          );
-                        },
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => DetailScreen(place: place),
+                          ),
+                        ),
                       );
                     },
                     childCount: _places.length,
@@ -242,27 +461,324 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
 
-      // ── FAB: buka peta ──────────────────────────
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => MapScreen(places: _places),
-            ),
-          );
-        },
-        icon: const Icon(Icons.map),
-        label: const Text('Peta'),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => MapScreen(places: _places)),
+        ),
+        backgroundColor: const Color(0xFF3B6FE8),
+        child: const Icon(Icons.map, color: Colors.white),
       ),
     );
   }
 }
 
+// ─────────────────────────────────────────────────────────
+// FAVORITE TAB
+// ─────────────────────────────────────────────────────────
+class _FavoriteTab extends StatelessWidget {
+  const _FavoriteTab();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FF),
+      body: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF3B6FE8), Color(0xFF1CB8C8)],
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(28),
+                  bottomRight: Radius.circular(28),
+                ),
+              ),
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 16,
+                left: 20,
+                right: 20,
+                bottom: 28,
+              ),
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Favorit',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Tempat yang kamu simpan',
+                    style: TextStyle(fontSize: 13, color: Colors.white70),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          const SliverFillRemaining(
+            child: Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.favorite_border_rounded,
+                    size: 72,
+                    color: Color(0xFFD0D8F0),
+                  ),
+                  SizedBox(height: 16),
+                  Text(
+                    'Belum ada favorit',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF1A1A2E),
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  Text(
+                    'Simpan tempat favoritmu\nuntuk akses lebih cepat',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// PROFILE TAB
+// ─────────────────────────────────────────────────────────
+class _ProfileTab extends StatelessWidget {
+  const _ProfileTab();
+
+  @override
+  Widget build(BuildContext context) {
+    final user = SupabaseService().currentUser;
+    final email = user?.email ?? '-';
+    final name = email.split('@').first;
+    const primary = Color(0xFF3B6FE8);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF5F7FF),
+      body: CustomScrollView(
+        slivers: [
+          // ── Header ──────────────────────────────
+          SliverToBoxAdapter(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF3B6FE8), Color(0xFF1CB8C8)],
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(28),
+                  bottomRight: Radius.circular(28),
+                ),
+              ),
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 20,
+                left: 20,
+                right: 20,
+                bottom: 32,
+              ),
+              child: Column(
+                children: [
+                  // Avatar
+                  Container(
+                    width: 80,
+                    height: 80,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.25),
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 3),
+                    ),
+                    child: Center(
+                      child: Text(
+                        name.isNotEmpty ? name[0].toUpperCase() : '?',
+                        style: const TextStyle(
+                          fontSize: 32,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    email,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Colors.white70,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+
+          const SliverToBoxAdapter(child: SizedBox(height: 20)),
+
+          // ── Menu Items ──────────────────────────
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Column(
+                children: [
+                  _ProfileMenuItem(
+                    icon: Icons.person_outline_rounded,
+                    label: 'Edit Profil',
+                    onTap: () {},
+                  ),
+                  const SizedBox(height: 10),
+                  _ProfileMenuItem(
+                    icon: Icons.history_rounded,
+                    label: 'Riwayat Ulasan',
+                    onTap: () {},
+                  ),
+                  const SizedBox(height: 10),
+                  _ProfileMenuItem(
+                    icon: Icons.notifications_outlined,
+                    label: 'Notifikasi',
+                    onTap: () {},
+                  ),
+                  const SizedBox(height: 10),
+                  _ProfileMenuItem(
+                    icon: Icons.help_outline_rounded,
+                    label: 'Bantuan',
+                    onTap: () {},
+                  ),
+                  const SizedBox(height: 24),
+
+                  // Logout button
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: () async {
+                        await SupabaseService().signOut();
+                        if (context.mounted) {
+                          Navigator.pushReplacement(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LoginScreen(),
+                            ),
+                          );
+                        }
+                      },
+                      icon: const Icon(Icons.logout_rounded),
+                      label: const Text(
+                        'Keluar',
+                        style: TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red.shade50,
+                        foregroundColor: Colors.red.shade600,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: BorderSide(color: Colors.red.shade100),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProfileMenuItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ProfileMenuItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(14),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(14),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+          child: Row(
+            children: [
+              Container(
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF0F3FF),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, color: const Color(0xFF3B6FE8), size: 20),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
+                  label,
+                  style: const TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                ),
+              ),
+              Icon(Icons.chevron_right_rounded,
+                  color: Colors.grey.shade400, size: 20),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// HELPERS
+// ─────────────────────────────────────────────────────────
 class _ErrorView extends StatelessWidget {
   final String message;
   final VoidCallback onRetry;
-
   const _ErrorView({required this.message, required this.onRetry});
 
   @override
@@ -280,16 +796,20 @@ class _ErrorView extends StatelessWidget {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 8),
-            Text(
-              message,
-              style: const TextStyle(color: Colors.grey),
-              textAlign: TextAlign.center,
-            ),
+            Text(message,
+                style: const TextStyle(color: Colors.grey),
+                textAlign: TextAlign.center),
             const SizedBox(height: 24),
-            FilledButton.icon(
+            ElevatedButton.icon(
               onPressed: onRetry,
               icon: const Icon(Icons.refresh),
               label: const Text('Coba Lagi'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF3B6FE8),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12)),
+              ),
             ),
           ],
         ),

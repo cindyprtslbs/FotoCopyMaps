@@ -7,9 +7,14 @@ import '../../services/location_service.dart';
 import '../../utils/constants.dart';
 import '../detail/detail_screen.dart';
 
+// ── Warna konsisten dengan app ─────────────────────────
+const _kPrimary = Color(0xFF3B6FE8);
+const _kGradientEnd = Color(0xFF1CB8C8);
+const _kDark = Color(0xFF1A1A2E);
+
 class MapScreen extends StatefulWidget {
   final List<Place> places;
-  final Place? focusPlace; // jika dibuka dari detail, langsung fokus ke sini
+  final Place? focusPlace;
 
   const MapScreen({
     super.key,
@@ -34,19 +39,19 @@ class _MapScreenState extends State<MapScreen> {
   }
 
   Future<void> _setupLocation() async {
-    final pos = _location.lastPosition ?? await _location.getCurrentLocation();
+    final pos =
+        _location.lastPosition ?? await _location.getCurrentLocation();
     if (pos != null && mounted) {
       setState(() => _userLatLng = LatLng(pos.latitude, pos.longitude));
     }
 
-    // Jika ada place yang difokus, geser peta ke sana
     if (widget.focusPlace != null) {
       Future.delayed(const Duration(milliseconds: 300), () {
         _mapController.move(
           LatLng(widget.focusPlace!.lat, widget.focusPlace!.lng),
           17.0,
         );
-        setState(() => _selectedPlace = widget.focusPlace);
+        if (mounted) setState(() => _selectedPlace = widget.focusPlace);
       });
     }
   }
@@ -62,25 +67,7 @@ class _MapScreenState extends State<MapScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          widget.focusPlace != null
-              ? widget.focusPlace!.name
-              : 'Peta Direktori',
-        ),
-        actions: [
-          // Tombol ke lokasi pengguna
-          if (_userLatLng != null)
-            IconButton(
-              icon: const Icon(Icons.my_location),
-              tooltip: 'Lokasi saya',
-              onPressed: () {
-                _mapController.move(_userLatLng!, 16.0);
-              },
-            ),
-        ],
-      ),
-
+      backgroundColor: const Color(0xFFF5F7FF),
       body: Stack(
         children: [
           // ── Peta utama ──────────────────────────
@@ -92,9 +79,9 @@ class _MapScreenState extends State<MapScreen> {
               onTap: (_, __) => setState(() => _selectedPlace = null),
             ),
             children: [
-              // Tile layer OpenStreetMap
               TileLayer(
-                urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                urlTemplate:
+                    'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.example.campus_directory',
               ),
 
@@ -104,23 +91,23 @@ class _MapScreenState extends State<MapScreen> {
                   markers: [
                     Marker(
                       point: _userLatLng!,
-                      width: 40,
-                      height: 40,
+                      width: 44,
+                      height: 44,
                       child: Container(
                         decoration: BoxDecoration(
-                          color: Colors.blue.shade600,
+                          color: _kPrimary,
                           shape: BoxShape.circle,
                           border: Border.all(color: Colors.white, width: 3),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.blue.withOpacity(0.4),
-                              blurRadius: 8,
+                              color: _kPrimary.withOpacity(0.4),
+                              blurRadius: 12,
                               spreadRadius: 2,
                             ),
                           ],
                         ),
                         child: const Icon(
-                          Icons.person,
+                          Icons.person_rounded,
                           color: Colors.white,
                           size: 20,
                         ),
@@ -135,37 +122,43 @@ class _MapScreenState extends State<MapScreen> {
                   final isSelected = _selectedPlace?.id == place.id;
                   return Marker(
                     point: LatLng(place.lat, place.lng),
-                    width: isSelected ? 52 : 44,
-                    height: isSelected ? 52 : 44,
+                    width: isSelected ? 54 : 46,
+                    height: isSelected ? 54 : 46,
                     child: GestureDetector(
                       onTap: () {
                         setState(() => _selectedPlace = place);
-                        _mapController.move(LatLng(place.lat, place.lng), 16);
+                        _mapController.move(
+                            LatLng(place.lat, place.lng), 16);
                       },
                       child: AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         decoration: BoxDecoration(
-                          color: isSelected
-                              ? Theme.of(context).colorScheme.primary
-                              : Colors.white,
+                          gradient: isSelected
+                              ? const LinearGradient(
+                                  begin: Alignment.topLeft,
+                                  end: Alignment.bottomRight,
+                                  colors: [_kPrimary, _kGradientEnd],
+                                )
+                              : null,
+                          color: isSelected ? null : Colors.white,
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: Theme.of(context).colorScheme.primary,
-                            width: 2.5,
+                            color: _kPrimary,
+                            width: isSelected ? 0 : 2.5,
                           ),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withOpacity(0.2),
-                              blurRadius: 6,
-                              offset: const Offset(0, 2),
+                              color: _kPrimary.withOpacity(
+                                  isSelected ? 0.4 : 0.15),
+                              blurRadius: isSelected ? 12 : 6,
+                              offset: const Offset(0, 3),
                             ),
                           ],
                         ),
                         child: Icon(
-                          Icons.place,
-                          color: isSelected
-                              ? Colors.white
-                              : Theme.of(context).colorScheme.primary,
+                          Icons.place_rounded,
+                          color:
+                              isSelected ? Colors.white : _kPrimary,
                           size: isSelected ? 28 : 24,
                         ),
                       ),
@@ -176,7 +169,151 @@ class _MapScreenState extends State<MapScreen> {
             ],
           ),
 
-          // ── Popup info tempat yang dipilih ─────
+          // ── Top Bar (custom app bar) ─────────────
+          Positioned(
+            top: 0,
+            left: 0,
+            right: 0,
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [_kPrimary, _kGradientEnd],
+                ),
+                borderRadius: const BorderRadius.only(
+                  bottomLeft: Radius.circular(24),
+                  bottomRight: Radius.circular(24),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: _kPrimary.withOpacity(0.3),
+                    blurRadius: 16,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 8,
+                left: 16,
+                right: 16,
+                bottom: 16,
+              ),
+              child: Row(
+                children: [
+                  // Tombol kembali
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.arrow_back,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  // Judul
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.focusPlace != null
+                              ? widget.focusPlace!.name
+                              : 'Peta Direktori',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 17,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '${widget.places.length} tempat',
+                          style: const TextStyle(
+                            color: Colors.white70,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Tombol lokasi saya
+                  if (_userLatLng != null)
+                    GestureDetector(
+                      onTap: () => _mapController.move(_userLatLng!, 16.0),
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.my_location_rounded,
+                          color: Colors.white,
+                          size: 20,
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ),
+
+          // ── Loading GPS indicator ─────────────────
+          if (_userLatLng == null)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 80,
+              left: 0,
+              right: 0,
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.08),
+                        blurRadius: 12,
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        width: 14,
+                        height: 14,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: _kPrimary,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Mendapatkan lokasi…',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: _kDark,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+          // ── Popup info tempat yang dipilih ─────────
           if (_selectedPlace != null)
             Positioned(
               bottom: 24,
@@ -189,7 +326,8 @@ class _MapScreenState extends State<MapScreen> {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => DetailScreen(place: _selectedPlace!),
+                      builder: (_) =>
+                          DetailScreen(place: _selectedPlace!),
                     ),
                   );
                 },
@@ -203,52 +341,15 @@ class _MapScreenState extends State<MapScreen> {
                 },
               ),
             ),
-
-          // ── Indikator GPS loading ──────────────
-          if (_userLatLng == null)
-            Positioned(
-              top: 12,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
-                        blurRadius: 8,
-                      )
-                    ],
-                  ),
-                  child: const Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      SizedBox(
-                        width: 14,
-                        height: 14,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      SizedBox(width: 8),
-                      Text(
-                        'Mendapatkan lokasi…',
-                        style: TextStyle(fontSize: 12),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
         ],
       ),
     );
   }
 }
 
-/// Popup kecil yang muncul saat marker diklik
+// ─────────────────────────────────────────────────────────
+// PLACE POPUP
+// ─────────────────────────────────────────────────────────
 class _PlacePopup extends StatelessWidget {
   final Place place;
   final LatLng? userLatLng;
@@ -264,22 +365,31 @@ class _PlacePopup extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-
     String? distanceText;
     if (userLatLng != null) {
       final meters = Geolocator.distanceBetween(
-        userLatLng!.latitude, userLatLng!.longitude,
-        place.lat, place.lng,
+        userLatLng!.latitude,
+        userLatLng!.longitude,
+        place.lat,
+        place.lng,
       );
       distanceText = meters < 1000
           ? '${meters.toStringAsFixed(0)} m'
           : '${(meters / 1000).toStringAsFixed(1)} km';
     }
 
-    return Card(
-      elevation: 8,
-      shadowColor: Colors.black26,
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.12),
+            blurRadius: 20,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -287,72 +397,157 @@ class _PlacePopup extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Text(
-                    place.name,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                // Icon kategori
+                Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                      colors: [_kPrimary, _kGradientEnd],
                     ),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.place_rounded,
+                      color: Colors.white, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        place.name,
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                          color: _kDark,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (place.categoryName != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          place.categoryName!,
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: _kPrimary,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ],
+                      if (place.address != null) ...[
+                        const SizedBox(height: 2),
+                        Text(
+                          place.address!,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade500,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ],
+                    ],
                   ),
                 ),
                 if (distanceText != null)
                   Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
-                      color: scheme.primaryContainer,
-                      borderRadius: BorderRadius.circular(12),
+                      color: const Color(0xFFF0F3FF),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: Text(
                       distanceText,
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: scheme.onPrimaryContainer,
-                        fontWeight: FontWeight.w600,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        color: _kPrimary,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ),
               ],
             ),
-            if (place.categoryName != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                place.categoryName!,
-                style: TextStyle(
-                  fontSize: 13,
-                  color: scheme.primary,
-                ),
+            if (place.rating != null || place.openHours != null) ...[
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  if (place.rating != null) ...[
+                    const Icon(Icons.star_rounded,
+                        size: 14, color: Colors.amber),
+                    const SizedBox(width: 3),
+                    Text(
+                      place.rating!.toStringAsFixed(1),
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                  ],
+                  if (place.openHours != null) ...[
+                    Icon(Icons.access_time_rounded,
+                        size: 13, color: Colors.grey.shade500),
+                    const SizedBox(width: 3),
+                    Text(
+                      place.openHours!,
+                      style: TextStyle(
+                          fontSize: 11, color: Colors.grey.shade500),
+                    ),
+                  ],
+                ],
               ),
             ],
-            if (place.address != null) ...[
-              const SizedBox(height: 4),
-              Text(
-                place.address!,
-                style: const TextStyle(fontSize: 12, color: Colors.grey),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ],
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Row(
               children: [
                 Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: onDetail,
-                    icon: const Icon(Icons.info_outline, size: 16),
-                    label: const Text('Detail'),
+                  child: SizedBox(
+                    height: 44,
+                    child: OutlinedButton.icon(
+                      onPressed: onDetail,
+                      icon: const Icon(Icons.info_outline_rounded, size: 16),
+                      label: const Text(
+                        'Detail',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: _kPrimary,
+                        side: const BorderSide(color: _kPrimary, width: 1.5),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
-                  child: FilledButton.icon(
-                    onPressed: onRoute,
-                    icon: const Icon(Icons.directions, size: 16),
-                    label: const Text('Rute'),
+                  child: SizedBox(
+                    height: 44,
+                    child: ElevatedButton.icon(
+                      onPressed: onRoute,
+                      icon: const Icon(Icons.directions_rounded, size: 16),
+                      label: const Text(
+                        'Rute',
+                        style: TextStyle(fontWeight: FontWeight.w600),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: _kPrimary,
+                        foregroundColor: Colors.white,
+                        elevation: 0,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ],
