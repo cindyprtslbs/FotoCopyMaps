@@ -1,7 +1,3 @@
-// lib/screens/detail/detail_screen.dart
-//
-// Layar detail: foto, deskripsi, jam buka, rating, review, dan tombol rute.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:cached_network_image/cached_network_image.dart';
