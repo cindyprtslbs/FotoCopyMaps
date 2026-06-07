@@ -12,6 +12,7 @@ import '../detail/detail_screen.dart';
 import '../../services/favorites_service.dart';
 import '../auth/login_screen.dart';
 import '../profile/edit_profile.dart';
+import '../profile/help_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -821,7 +822,14 @@ class _ProfileTabState extends State<_ProfileTab> {
                   _ProfileMenuItem(
                     icon: Icons.help_outline_rounded,
                     label: 'Bantuan',
-                    onTap: () {},
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const HelpScreen(),
+                        ),
+                      );
+                    },
                   ),
                   const SizedBox(height: 24),
 
