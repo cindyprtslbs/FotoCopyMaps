@@ -98,7 +98,16 @@ class SupabaseService {
       'user_id': user?.id,
       'rating': rating.toInt(),
       'comment': comment,
+      'user_email': user?.email, 
     });
+  }
+
+  /// Hapus review berdasarkan ID (hanya bisa hapus milik sendiri)
+  Future<void> deleteReview(int reviewId) async {
+    await _client
+        .from('reviews')
+        .delete()
+        .eq('id', reviewId);
   }
 
   // ─────────────────────────────────────────

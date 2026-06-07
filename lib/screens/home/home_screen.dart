@@ -9,6 +9,7 @@ import '../../widgets/place_card.dart';
 import '../../widgets/category_chip.dart';
 import '../map/map_screen.dart';
 import '../detail/detail_screen.dart';
+import '../../services/favorites_service.dart';
 import '../auth/login_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -476,84 +477,168 @@ class _HomeTabState extends State<_HomeTab> {
 // ─────────────────────────────────────────────────────────
 // FAVORITE TAB
 // ─────────────────────────────────────────────────────────
-class _FavoriteTab extends StatelessWidget {
+class _FavoriteTab extends StatefulWidget {
   const _FavoriteTab();
+
+  @override
+  State<_FavoriteTab> createState() => _FavoriteTabState();
+}
+
+class _FavoriteTabState extends State<_FavoriteTab> {
+  final _supabase = SupabaseService();
+  final _favService = FavoritesService();
+  final _location = LocationService();
+
+  List<Place> _favPlaces = [];
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadFavorites();
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _loadFavorites();
+  }
+
+  Future<void> _loadFavorites() async {
+    if (mounted) setState(() => _isLoading = true);
+    try {
+      final ids = await _favService.getFavoriteIds();
+      if (ids.isEmpty) {
+        if (mounted) setState(() { _favPlaces = []; _isLoading = false; });
+        return;
+      }
+      // Ambil semua places lalu filter by id
+      final allPlaces = await _supabase.getPlaces();
+      final favs = allPlaces.where((p) => ids.contains(p.id)).toList();
+      // Hitung jarak
+      for (var p in favs) {
+        p.distanceMeters = _location.distanceTo(p);
+      }
+      if (mounted) setState(() => _favPlaces = favs);
+    } catch (_) {}
+    if (mounted) setState(() => _isLoading = false);
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FF),
-      body: CustomScrollView(
-        slivers: [
-          SliverToBoxAdapter(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF3B6FE8), Color(0xFF1CB8C8)],
+      body: RefreshIndicator(
+        onRefresh: _loadFavorites,
+        color: const Color(0xFF3B6FE8),
+        child: CustomScrollView(
+          slivers: [
+            // ── Header ──────────────────────────
+            SliverToBoxAdapter(
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [Color(0xFF3B6FE8), Color(0xFF1CB8C8)],
+                  ),
+                  borderRadius: BorderRadius.only(
+                    bottomLeft: Radius.circular(28),
+                    bottomRight: Radius.circular(28),
+                  ),
                 ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(28),
-                  bottomRight: Radius.circular(28),
+                padding: EdgeInsets.only(
+                  top: MediaQuery.of(context).padding.top + 16,
+                  left: 20,
+                  right: 20,
+                  bottom: 28,
                 ),
-              ),
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 16,
-                left: 20,
-                right: 20,
-                bottom: 28,
-              ),
-              child: const Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Favorit',
-                    style: TextStyle(
-                      fontSize: 22,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Favorit',
+                      style: TextStyle(
+                        fontSize: 22,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  SizedBox(height: 4),
-                  Text(
-                    'Tempat yang kamu simpan',
-                    style: TextStyle(fontSize: 13, color: Colors.white70),
-                  ),
-                ],
+                    const SizedBox(height: 4),
+                    Text(
+                      _isLoading
+                          ? 'Memuat...'
+                          : _favPlaces.isEmpty
+                              ? 'Tempat yang kamu simpan'
+                              : '${_favPlaces.length} tempat tersimpan',
+                      style: const TextStyle(fontSize: 13, color: Colors.white70),
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-          const SliverFillRemaining(
-            child: Center(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.favorite_border_rounded,
-                    size: 72,
-                    color: Color(0xFFD0D8F0),
+
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
+
+            // ── Konten ──────────────────────────
+            if (_isLoading)
+              const SliverFillRemaining(
+                child: Center(
+                  child: CircularProgressIndicator(color: Color(0xFF3B6FE8)),
+                ),
+              )
+            else if (_favPlaces.isEmpty)
+              const SliverFillRemaining(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(
+                        Icons.favorite_border_rounded,
+                        size: 72,
+                        color: Color(0xFFD0D8F0),
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        'Belum ada favorit',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Color(0xFF1A1A2E),
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                    ],
                   ),
-                  SizedBox(height: 16),
-                  Text(
-                    'Belum ada favorit',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1A1A2E),
-                    ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      final place = _favPlaces[index];
+                      return PlaceCard(
+                        place: place,
+                        onTap: () async {
+                          await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => DetailScreen(place: place),
+                            ),
+                          );
+                          // Refresh setelah kembali (user mungkin un-favorite)
+                          _loadFavorites();
+                        },
+                      );
+                    },
+                    childCount: _favPlaces.length,
                   ),
-                  SizedBox(height: 8),
-                  Text(
-                    'Simpan tempat favoritmu\nuntuk akses lebih cepat',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

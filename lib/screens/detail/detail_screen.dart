@@ -1,3 +1,5 @@
+// lib/screens/detail/detail_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -5,9 +7,9 @@ import '../../models/place_model.dart';
 import '../../models/review_model.dart';
 import '../../services/supabase_service.dart';
 import '../../services/location_service.dart';
+import '../../services/favorites_service.dart';
 import '../map/map_screen.dart';
 
-// ── Warna konsisten dengan app ─────────────────────────
 const _kPrimary = Color(0xFF3B6FE8);
 const _kGradientEnd = Color(0xFF1CB8C8);
 const _kBackground = Color(0xFFF5F7FF);
@@ -15,7 +17,6 @@ const _kDark = Color(0xFF1A1A2E);
 
 class DetailScreen extends StatefulWidget {
   final Place place;
-
   const DetailScreen({super.key, required this.place});
 
   @override
@@ -25,18 +26,57 @@ class DetailScreen extends StatefulWidget {
 class _DetailScreenState extends State<DetailScreen> {
   final _supabase = SupabaseService();
   final _location = LocationService();
+  final _favService = FavoritesService();
 
   List<Review> _reviews = [];
   bool _loadingReviews = true;
+  bool _isFavorite = false;
 
   double _newRating = 4.0;
   final _commentController = TextEditingController();
   bool _submitting = false;
 
+  // Nama user dari email (bagian sebelum @)
+  String get _userName {
+    final email = _supabase.currentUser?.email ?? '';
+    return email.split('@').first;
+  }
+
+  // Inisial untuk avatar
+  String get _userInitial {
+    return _userName.isNotEmpty ? _userName[0].toUpperCase() : '?';
+  }
+
   @override
   void initState() {
     super.initState();
     _loadReviews();
+    _loadFavoriteStatus();
+  }
+
+  Future<void> _loadFavoriteStatus() async {
+    final fav = await _favService.isFavorite(widget.place.id);
+    if (mounted) setState(() => _isFavorite = fav);
+  }
+
+  Future<void> _toggleFavorite() async {
+    final newStatus = await _favService.toggleFavorite(widget.place.id);
+    if (mounted) {
+      setState(() => _isFavorite = newStatus);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            newStatus
+                ? '${widget.place.name} ditambahkan ke favorit ❤️'
+                : '${widget.place.name} dihapus dari favorit',
+          ),
+          backgroundColor: newStatus ? _kPrimary : Colors.grey.shade700,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
   }
 
   Future<void> _loadReviews() async {
@@ -55,7 +95,6 @@ class _DetailScreenState extends State<DetailScreen> {
       originLat: pos?.latitude,
       originLng: pos?.longitude,
     );
-
     if (!success && mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -71,7 +110,6 @@ class _DetailScreenState extends State<DetailScreen> {
   Future<void> _submitReview() async {
     if (_submitting) return;
     setState(() => _submitting = true);
-
     try {
       await _supabase.addReview(
         placeId: widget.place.id,
@@ -110,6 +148,65 @@ class _DetailScreenState extends State<DetailScreen> {
     }
   }
 
+  Future<void> _deleteReview(Review review) async {
+    // Konfirmasi dulu
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Hapus Ulasan?'),
+        content: const Text('Ulasan ini akan dihapus permanen.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red.shade500,
+              foregroundColor: Colors.white,
+              elevation: 0,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10)),
+            ),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      await _supabase.deleteReview(review.id);
+      await _loadReviews();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: const Text('Ulasan berhasil dihapus.'),
+            backgroundColor: Colors.green.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Gagal hapus ulasan: $e'),
+            backgroundColor: Colors.red.shade600,
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10)),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   void dispose() {
     _commentController.dispose();
@@ -143,6 +240,31 @@ class _DetailScreenState extends State<DetailScreen> {
               ),
             ),
             actions: [
+              // ── Tombol Favorit ──────────────────
+              Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: GestureDetector(
+                  onTap: _toggleFavorite,
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 250),
+                      child: Icon(
+                        _isFavorite
+                            ? Icons.favorite_rounded
+                            : Icons.favorite_border_rounded,
+                        key: ValueKey(_isFavorite),
+                        color: _isFavorite ? Colors.red.shade300 : Colors.white,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              // ── Tombol Peta ─────────────────────
               Padding(
                 padding: const EdgeInsets.only(right: 8),
                 child: GestureDetector(
@@ -168,24 +290,23 @@ class _DetailScreenState extends State<DetailScreen> {
               background: Stack(
                 fit: StackFit.expand,
                 children: [
-                  // Foto tempat
                   place.photoUrl != null
                       ? CachedNetworkImage(
                           imageUrl: place.photoUrl!,
                           fit: BoxFit.cover,
                           placeholder: (_, __) => Container(
-                              decoration: const BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topLeft,
-                              end: Alignment.bottomRight,
-                              colors: [_kPrimary, _kGradientEnd],
+                            decoration: const BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                                colors: [_kPrimary, _kGradientEnd],
+                              ),
                             ),
-                          )),
+                          ),
                           errorWidget: (_, __, ___) =>
                               _PlaceholderImage(name: place.name),
                         )
                       : _PlaceholderImage(name: place.name),
-                  // Gradient overlay bawah
                   const DecoratedBox(
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
@@ -200,7 +321,6 @@ class _DetailScreenState extends State<DetailScreen> {
                       ),
                     ),
                   ),
-                  // Judul di bawah foto
                   Positioned(
                     bottom: 16,
                     left: 16,
@@ -254,7 +374,7 @@ class _DetailScreenState extends State<DetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // ── Stats Row ────────────────────────
+                  // ── Stats Row ─────────────────────
                   Row(
                     children: [
                       if (place.rating != null)
@@ -280,65 +400,36 @@ class _DetailScreenState extends State<DetailScreen> {
 
                   const SizedBox(height: 16),
 
-                  // ── Info Card ────────────────────────
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
+                  // ── Info Card ─────────────────────
+                  _Card(
                     child: Column(
                       children: [
                         if (place.address != null)
                           _InfoRow(
-                            icon: Icons.location_on_outlined,
-                            label: place.address!,
-                          ),
+                              icon: Icons.location_on_outlined,
+                              label: place.address!),
                         if (place.address != null &&
                             (place.openHours != null ||
                                 place.priceRange != null))
-                          const _Divider(),
+                          const _HDivider(),
                         if (place.openHours != null)
                           _InfoRow(
-                            icon: Icons.access_time_rounded,
-                            label: place.openHours!,
-                          ),
+                              icon: Icons.access_time_rounded,
+                              label: place.openHours!),
                         if (place.openHours != null && place.priceRange != null)
-                          const _Divider(),
+                          const _HDivider(),
                         if (place.priceRange != null)
                           _InfoRow(
-                            icon: Icons.payments_outlined,
-                            label: place.priceRange!,
-                          ),
+                              icon: Icons.payments_outlined,
+                              label: place.priceRange!),
                       ],
                     ),
                   ),
 
-                  // ── Deskripsi ────────────────────────
+                  // ── Deskripsi ─────────────────────
                   if (place.description != null) ...[
-                    const SizedBox(height: 16),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
-                          ),
-                        ],
-                      ),
+                    const SizedBox(height: 12),
+                    _Card(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
@@ -366,7 +457,7 @@ class _DetailScreenState extends State<DetailScreen> {
 
                   const SizedBox(height: 20),
 
-                  // ── Tombol Rute ──────────────────────
+                  // ── Tombol Rute ───────────────────
                   SizedBox(
                     width: double.infinity,
                     height: 52,
@@ -376,54 +467,72 @@ class _DetailScreenState extends State<DetailScreen> {
                       label: const Text(
                         'Buka Rute',
                         style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w600,
-                          letterSpacing: 0.3,
-                        ),
+                            fontSize: 16, fontWeight: FontWeight.w600),
                       ),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: _kPrimary,
                         foregroundColor: Colors.white,
                         elevation: 0,
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                        ),
+                            borderRadius: BorderRadius.circular(14)),
                       ),
                     ),
                   ),
 
                   const SizedBox(height: 28),
 
-                  // ── Form Review ──────────────────────
+                  // ── Form Review ───────────────────
                   _SectionHeader(
                     title: 'Beri Ulasan',
                     subtitle: 'Bagikan pengalamanmu',
                   ),
                   const SizedBox(height: 14),
 
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
-                          blurRadius: 12,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
+                  _Card(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Nama user yang login
+                        Row(
+                          children: [
+                            Container(
+                              width: 36,
+                              height: 36,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(
+                                  colors: [_kPrimary, _kGradientEnd],
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Center(
+                                child: Text(
+                                  _userInitial,
+                                  style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 15,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Text(
+                              _userName,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 14,
+                                color: _kDark,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
                         const Text(
                           'Rating',
                           style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF444444),
-                          ),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF444444)),
                         ),
                         const SizedBox(height: 10),
                         RatingBar.builder(
@@ -432,18 +541,19 @@ class _DetailScreenState extends State<DetailScreen> {
                           direction: Axis.horizontal,
                           itemCount: 5,
                           itemSize: 34,
-                          itemBuilder: (_, __) =>
-                              const Icon(Icons.star_rounded, color: Colors.amber),
-                          onRatingUpdate: (r) => setState(() => _newRating = r),
+                          itemBuilder: (_, __) => const Icon(
+                              Icons.star_rounded,
+                              color: Colors.amber),
+                          onRatingUpdate: (r) =>
+                              setState(() => _newRating = r),
                         ),
                         const SizedBox(height: 14),
                         const Text(
                           'Komentar (opsional)',
                           style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w500,
-                            color: Color(0xFF444444),
-                          ),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: Color(0xFF444444)),
                         ),
                         const SizedBox(height: 8),
                         TextField(
@@ -482,24 +592,20 @@ class _DetailScreenState extends State<DetailScreen> {
                               disabledBackgroundColor:
                                   _kPrimary.withOpacity(0.5),
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
+                                  borderRadius: BorderRadius.circular(12)),
                             ),
                             child: _submitting
                                 ? const SizedBox(
                                     width: 20,
                                     height: 20,
                                     child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.white,
-                                    ),
+                                        strokeWidth: 2, color: Colors.white),
                                   )
                                 : const Text(
                                     'Kirim Ulasan',
                                     style: TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w600,
-                                    ),
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w600),
                                   ),
                           ),
                         ),
@@ -509,7 +615,7 @@ class _DetailScreenState extends State<DetailScreen> {
 
                   const SizedBox(height: 28),
 
-                  // ── Daftar Review ─────────────────────
+                  // ── Daftar Review ─────────────────
                   _SectionHeader(
                     title: 'Ulasan',
                     subtitle: _reviews.isEmpty
@@ -522,18 +628,11 @@ class _DetailScreenState extends State<DetailScreen> {
                     const Center(
                       child: Padding(
                         padding: EdgeInsets.all(24),
-                        child:
-                            CircularProgressIndicator(color: _kPrimary),
+                        child: CircularProgressIndicator(color: _kPrimary),
                       ),
                     )
                   else if (_reviews.isEmpty)
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(24),
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
-                      ),
+                    _Card(
                       child: Column(
                         children: [
                           Icon(Icons.rate_review_outlined,
@@ -549,7 +648,10 @@ class _DetailScreenState extends State<DetailScreen> {
                       ),
                     )
                   else
-                    ..._reviews.map((r) => _ReviewCard(review: r)),
+                    ..._reviews.map((r) => _ReviewCard(
+                      review: r,
+                      onDelete: () => _deleteReview(r),
+                    )),
 
                   const SizedBox(height: 40),
                 ],
@@ -565,6 +667,31 @@ class _DetailScreenState extends State<DetailScreen> {
 // ─────────────────────────────────────────────────────────
 // HELPER WIDGETS
 // ─────────────────────────────────────────────────────────
+
+class _Card extends StatelessWidget {
+  final Widget child;
+  const _Card({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
 
 class _PlaceholderImage extends StatelessWidget {
   final String name;
@@ -584,10 +711,7 @@ class _PlaceholderImage extends StatelessWidget {
         child: Text(
           name.isNotEmpty ? name[0].toUpperCase() : '?',
           style: const TextStyle(
-            fontSize: 72,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+              fontSize: 72, fontWeight: FontWeight.bold, color: Colors.white),
         ),
       ),
     );
@@ -597,9 +721,7 @@ class _PlaceholderImage extends StatelessWidget {
 class _StatChip extends StatelessWidget {
   final IconData icon;
   final String label;
-  final Color iconColor;
-  final Color bgColor;
-  final Color textColor;
+  final Color iconColor, bgColor, textColor;
 
   const _StatChip({
     required this.icon,
@@ -613,23 +735,18 @@ class _StatChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(20),
-      ),
+      decoration:
+          BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(20)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(icon, size: 16, color: iconColor),
           const SizedBox(width: 5),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: textColor,
-            ),
-          ),
+          Text(label,
+              style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w600,
+                  color: textColor)),
         ],
       ),
     );
@@ -659,14 +776,9 @@ class _InfoRow extends StatelessWidget {
         Expanded(
           child: Padding(
             padding: const EdgeInsets.only(top: 8),
-            child: Text(
-              label,
-              style: const TextStyle(
-                fontSize: 14,
-                color: _kDark,
-                height: 1.4,
-              ),
-            ),
+            child: Text(label,
+                style: const TextStyle(
+                    fontSize: 14, color: _kDark, height: 1.4)),
           ),
         ),
       ],
@@ -674,8 +786,8 @@ class _InfoRow extends StatelessWidget {
   }
 }
 
-class _Divider extends StatelessWidget {
-  const _Divider();
+class _HDivider extends StatelessWidget {
+  const _HDivider();
 
   @override
   Widget build(BuildContext context) {
@@ -696,25 +808,15 @@ class _SectionHeader extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.end,
       children: [
-        Text(
-          title,
-          style: const TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: _kDark,
-          ),
-        ),
+        Text(title,
+            style: const TextStyle(
+                fontSize: 18, fontWeight: FontWeight.bold, color: _kDark)),
         if (subtitle != null) ...[
           const SizedBox(width: 8),
           Padding(
             padding: const EdgeInsets.only(bottom: 1),
-            child: Text(
-              subtitle!,
-              style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade500,
-              ),
-            ),
+            child: Text(subtitle!,
+                style: TextStyle(fontSize: 13, color: Colors.grey.shade500)),
           ),
         ],
       ],
@@ -723,11 +825,32 @@ class _SectionHeader extends StatelessWidget {
 }
 
 class _ReviewCard extends StatelessWidget {
-  final Review review;
-  const _ReviewCard({required this.review});
+  final Review review; 
+  final VoidCallback? onDelete;  
+  const _ReviewCard({required this.review, this.onDelete});
+
+  // Ambil nama dari userId jika ada, fallback ke 'Pengguna'
+  String get _displayName {
+    final userId = review.userId;
+    if (userId == null || userId.isEmpty) return 'Pengguna';
+    // userId adalah UUID — tampilkan saja 'Pengguna' + 4 char pertama sebagai ID
+    return 'Pengguna';
+  }
+
+  String get _initial => _displayName[0].toUpperCase();
 
   @override
   Widget build(BuildContext context) {
+    // Cek apakah review ini milik user yang sedang login
+    final reviewName = review.userEmail != null && review.userEmail!.isNotEmpty
+        ? review.userEmail!.split('@').first
+        : 'Pengguna';
+
+    final currentUserId = SupabaseService().currentUser?.id;
+    final isOwn = review.userId != null && review.userId == currentUserId;
+    final displayName = reviewName;
+    final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -747,29 +870,67 @@ class _ReviewCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              // Avatar placeholder
+              // Avatar dengan inisial atau gradien
               Container(
                 width: 36,
                 height: 36,
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF0F3FF),
+                  gradient: isOwn
+                      ? const LinearGradient(
+                          colors: [_kPrimary, _kGradientEnd])
+                      : null,
+                  color: isOwn ? null : const Color(0xFFF0F3FF),
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(Icons.person_rounded,
-                    size: 20, color: _kPrimary),
+                child: Center(
+                  child: isOwn
+                      ? Text(
+                          initial,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 15,
+                          ),
+                        )
+                      : const Icon(Icons.person_rounded,
+                          size: 20, color: _kPrimary),
+                ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Pengguna Anonim',
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.w600,
-                        color: _kDark,
-                      ),
+                    Row(
+                      children: [
+                        Text(
+                          displayName,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: _kDark,
+                          ),
+                        ),
+                        if (isOwn) ...[
+                          const SizedBox(width: 6),
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 7, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8EEFF),
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text(
+                              'Kamu',
+                              style: TextStyle(
+                                fontSize: 10,
+                                color: _kPrimary,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
                     if (review.createdAt != null)
                       Text(
@@ -792,6 +953,24 @@ class _ReviewCard extends StatelessWidget {
                   ),
                 ),
               ),
+              if (isOwn && onDelete != null) ...[
+                const SizedBox(width: 6),
+                GestureDetector(
+                  onTap: onDelete,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(6),
+                    ),
+                    child: Icon(
+                      Icons.delete_outline_rounded,
+                      size: 16,
+                      color: Colors.red.shade400,
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           if (review.comment != null && review.comment!.isNotEmpty) ...[
@@ -799,10 +978,7 @@ class _ReviewCard extends StatelessWidget {
             Text(
               review.comment!,
               style: TextStyle(
-                fontSize: 13,
-                color: Colors.grey.shade700,
-                height: 1.5,
-              ),
+                  fontSize: 13, color: Colors.grey.shade700, height: 1.5),
             ),
           ],
         ],

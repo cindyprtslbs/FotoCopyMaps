@@ -4,6 +4,7 @@ class Review {
   final String? userId;
   final double rating;
   final String? comment;
+  final String? userEmail; 
   final DateTime? createdAt;
 
   const Review({
@@ -12,6 +13,7 @@ class Review {
     this.userId,
     required this.rating,
     this.comment,
+    this.userEmail, 
     this.createdAt,
   });
 
@@ -22,6 +24,7 @@ class Review {
       userId: json['user_id'] as String?,
       rating: (json['rating'] as num).toDouble(),
       comment: json['comment'] as String?,
+      userEmail: json['user_email'] as String?,
       createdAt: json['created_at'] != null
           ? DateTime.parse(json['created_at'] as String)
           : null,
