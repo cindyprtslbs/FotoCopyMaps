@@ -11,6 +11,7 @@ import '../map/map_screen.dart';
 import '../detail/detail_screen.dart';
 import '../../services/favorites_service.dart';
 import '../auth/login_screen.dart';
+import '../profile/edit_profile.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -647,14 +648,79 @@ class _FavoriteTabState extends State<_FavoriteTab> {
 // ─────────────────────────────────────────────────────────
 // PROFILE TAB
 // ─────────────────────────────────────────────────────────
-class _ProfileTab extends StatelessWidget {
+
+class _ProfileTab extends StatefulWidget {
   const _ProfileTab();
 
   @override
-  Widget build(BuildContext context) {
+  State<_ProfileTab> createState() => _ProfileTabState();
+}
+
+class _ProfileTabState extends State<_ProfileTab> {
+  late String _userName;
+  late String _userEmail;
+  bool _isLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  void _loadUserData() {
     final user = SupabaseService().currentUser;
-    final email = user?.email ?? '-';
-    final name = email.split('@').first;
+    _userEmail = user?.email ?? '-';
+    _userName = user?.userMetadata?['display_name'] ?? _userEmail.split('@').first;
+  }
+
+  void _showEditProfile() {
+    showDialog(
+      context: context,
+      builder: (context) => _EditProfileDialog(
+        currentName: _userName,
+        currentEmail: _userEmail,
+        onSave: (newName) async {
+          try {
+            setState(() => _isLoading = true);
+            
+            // Update ke Supabase
+            await SupabaseService().updateUserProfile(
+              displayName: newName,
+              username: newName.toLowerCase().replaceAll(' ', '_'),
+            );
+            
+            // Refresh data lokal
+            _loadUserData();
+            
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Profil berhasil diperbarui'),
+                  backgroundColor: Colors.green,
+                  duration: Duration(seconds: 2),
+                ),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Gagal memperbarui profil: $e'),
+                  backgroundColor: Colors.red,
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            }
+          } finally {
+            setState(() => _isLoading = false);
+          }
+        },
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     const primary = Color(0xFF3B6FE8);
 
     return Scaffold(
@@ -694,7 +760,7 @@ class _ProfileTab extends StatelessWidget {
                     ),
                     child: Center(
                       child: Text(
-                        name.isNotEmpty ? name[0].toUpperCase() : '?',
+                        _userName.isNotEmpty ? _userName[0].toUpperCase() : '?',
                         style: const TextStyle(
                           fontSize: 32,
                           fontWeight: FontWeight.bold,
@@ -705,7 +771,7 @@ class _ProfileTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    name,
+                    _userName,
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -714,7 +780,7 @@ class _ProfileTab extends StatelessWidget {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    email,
+                    _userEmail,
                     style: const TextStyle(
                       fontSize: 13,
                       color: Colors.white70,
@@ -736,7 +802,7 @@ class _ProfileTab extends StatelessWidget {
                   _ProfileMenuItem(
                     icon: Icons.person_outline_rounded,
                     label: 'Edit Profil',
-                    onTap: () {},
+                    onTap: _showEditProfile,
                   ),
                   const SizedBox(height: 10),
                   _ProfileMenuItem(
@@ -805,6 +871,200 @@ class _ProfileTab extends StatelessWidget {
   }
 }
 
+// ─────────────────────────────────────────────────────────
+// EDIT PROFILE DIALOG
+// ─────────────────────────────────────────────────────────
+class _EditProfileDialog extends StatefulWidget {
+  final String currentName;
+  final String currentEmail;
+  final Function(String) onSave;
+
+  const _EditProfileDialog({
+    required this.currentName,
+    required this.currentEmail,
+    required this.onSave,
+  });
+
+  @override
+  State<_EditProfileDialog> createState() => _EditProfileDialogState();
+}
+
+class _EditProfileDialogState extends State<_EditProfileDialog> {
+  late TextEditingController _nameController;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameController = TextEditingController(text: widget.currentName);
+  }
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header
+            Row(
+              children: [
+                const Text(
+                  'Edit Profil',
+                  style: TextStyle(
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1A1A2E),
+                  ),
+                ),
+                const Spacer(),
+                InkWell(
+                  onTap: () => Navigator.pop(context),
+                  child: const Icon(Icons.close_rounded, color: Colors.grey),
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+
+            // Email field (read-only)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Email',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF666666),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TextField(
+                    enabled: false,
+                    decoration: InputDecoration(
+                      hintText: widget.currentEmail,
+                      hintStyle: const TextStyle(color: Colors.grey),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.all(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+
+            // Name field (editable)
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Nama',
+                  style: TextStyle(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Color(0xFF666666),
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.grey.shade300),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: TextField(
+                    controller: _nameController,
+                    decoration: const InputDecoration(
+                      hintText: 'Masukkan nama Anda',
+                      hintStyle: TextStyle(color: Colors.grey),
+                      border: InputBorder.none,
+                      contentPadding: EdgeInsets.all(12),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // Buttons
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: _isSaving ? null : () => Navigator.pop(context),
+                  child: const Text(
+                    'Batal',
+                    style: TextStyle(
+                      color: Colors.grey,
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                ElevatedButton(
+                  onPressed: _isSaving
+                      ? null
+                      : () async {
+                          if (_nameController.text.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text('Nama tidak boleh kosong'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+
+                          setState(() => _isSaving = true);
+                          await widget.onSave(_nameController.text);
+                          if (mounted) {
+                            Navigator.pop(context);
+                          }
+                        },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF3B6FE8),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            valueColor:
+                                AlwaysStoppedAnimation<Color>(Colors.white),
+                          ),
+                        )
+                      : const Text('Simpan'),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// PROFILE MENU ITEM
+// ─────────────────────────────────────────────────────────
 class _ProfileMenuItem extends StatelessWidget {
   final IconData icon;
   final String label;

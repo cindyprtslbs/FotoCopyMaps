@@ -110,6 +110,38 @@ class SupabaseService {
         .eq('id', reviewId);
   }
 
+  // // ─────────────────────────────────────────
+  // // AUTH (opsional - jika pakai login)
+  // // ─────────────────────────────────────────
+
+  // User? get currentUser => _client.auth.currentUser;
+  // bool get isLoggedIn => currentUser != null;
+
+  // Future<AuthResponse> signIn(String email, String password) async {
+  //   return await _client.auth.signInWithPassword(
+  //     email: email,
+  //     password: password,
+  //   );
+  // }
+
+  // Future<AuthResponse> signUp(String email, String password) async {
+  //   return await _client.auth.signUp(
+  //     email: email,
+  //     password: password,
+  //   );
+  // }
+
+  // Future<void> signOut() async {
+  //   await _client.auth.signOut();
+  // }
+
+  // Stream<AuthState> get authStateChanges =>
+  //     _client.auth.onAuthStateChange;
+
+
+
+
+
   // ─────────────────────────────────────────
   // AUTH (opsional - jika pakai login)
   // ─────────────────────────────────────────
@@ -137,4 +169,50 @@ class SupabaseService {
 
   Stream<AuthState> get authStateChanges =>
       _client.auth.onAuthStateChange;
+
+  /// Update profil user dengan nama dan username
+  /// Data disimpan di Supabase Auth user metadata
+  Future<void> updateUserProfile({
+    required String displayName,
+    required String username,
+  }) async {
+    final user = _client.auth.currentUser;
+    if (user == null) {
+      throw Exception('User tidak terautentikasi');
+    }
+
+    try {
+      // Update user metadata di Supabase Auth
+      await _client.auth.updateUser(
+        UserAttributes(
+          data: {
+            'display_name': displayName,
+            'username': username,
+          },
+        ),
+      );
+    } catch (e) {
+      throw Exception('Gagal memperbarui profil: $e');
+    }
+  }
+
+  /// Ambil profil user dari metadata
+  Map<String, dynamic>? getUserProfile() {
+    final user = _client.auth.currentUser;
+    if (user == null) return null;
+    
+    return user.userMetadata ?? {};
+  }
+
+  /// Ambil display name user
+  String? getUserDisplayName() {
+    final profile = getUserProfile();
+    return profile?['display_name'] as String?;
+  }
+
+  /// Ambil username user
+  String? getUserUsername() {
+    final profile = getUserProfile();
+    return profile?['username'] as String?;
+  }
 }
