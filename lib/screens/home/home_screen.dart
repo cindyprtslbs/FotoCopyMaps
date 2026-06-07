@@ -205,8 +205,9 @@ class _HomeTabState extends State<_HomeTab> {
   @override
   Widget build(BuildContext context) {
     final user = SupabaseService().currentUser;
-    final email = user?.email ?? 'Pengguna';
-    final name = email.split('@').first;
+    final displayName = user?.userMetadata?['display_name'] as String?;
+    final email = user?.email ?? '';
+    final name = displayName ?? (email.isNotEmpty ? email.split('@').first : 'Pengguna');
 
     return Scaffold(
       backgroundColor: const Color(0xFFF5F7FF),

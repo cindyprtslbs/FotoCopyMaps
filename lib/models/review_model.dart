@@ -2,6 +2,7 @@ class Review {
   final int id;
   final int placeId;
   final String? userId;
+  final String? userName;
   final double rating;
   final String? comment;
   final String? userEmail; 
@@ -11,6 +12,7 @@ class Review {
     required this.id,
     required this.placeId,
     this.userId,
+    this.userName,
     required this.rating,
     this.comment,
     this.userEmail, 
@@ -22,6 +24,7 @@ class Review {
       id: json['id'] as int,
       placeId: json['place_id'] as int,
       userId: json['user_id'] as String?,
+      userName: json['user_name'] as String?,
       rating: (json['rating'] as num).toDouble(),
       comment: json['comment'] as String?,
       userEmail: json['user_email'] as String?,

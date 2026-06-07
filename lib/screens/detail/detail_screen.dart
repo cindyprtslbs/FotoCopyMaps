@@ -38,8 +38,11 @@ class _DetailScreenState extends State<DetailScreen> {
 
   // Nama user dari email (bagian sebelum @)
   String get _userName {
-    final email = _supabase.currentUser?.email ?? '';
-    return email.split('@').first;
+    final user = _supabase.currentUser;
+    final displayName = user?.userMetadata?['display_name'] as String?;
+    if (displayName != null && displayName.isNotEmpty) return displayName;
+    final email = user?.email ?? '';
+    return email.isNotEmpty ? email.split('@').first : 'Pengguna';
   }
 
   // Inisial untuk avatar
@@ -405,13 +408,7 @@ class _DetailScreenState extends State<DetailScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (place.address != null)
-                          _InfoRow(
-                              icon: Icons.location_on_outlined,
-                              label: place.address!),
                         if (place.description != null) ...[
-                          if (place.address != null) const _HDivider(),
-                          const SizedBox(height: 8),
                           Text(
                             place.description!,
                             style: TextStyle(
@@ -421,9 +418,14 @@ class _DetailScreenState extends State<DetailScreen> {
                             ),
                           ),
                         ],
+                        if (place.address != null)
+                        const SizedBox(height: 8),
+                          _InfoRow(
+                              icon: Icons.location_on_outlined,
+                              label: place.address!),
                         if (place.openHours != null) ...[
                           if (place.address != null || place.description != null)
-                            const _HDivider(),
+                          const SizedBox(height: 8),
                           _InfoRow(
                               icon: Icons.access_time_rounded,
                               label: place.openHours!),
@@ -819,9 +821,11 @@ class _ReviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Cek apakah review ini milik user yang sedang login
-    final reviewName = review.userEmail != null && review.userEmail!.isNotEmpty
-        ? review.userEmail!.split('@').first
-        : 'Pengguna';
+    final reviewName = (review.userName != null && review.userName!.isNotEmpty)
+        ? review.userName!
+        : (review.userEmail != null && review.userEmail!.isNotEmpty
+            ? review.userEmail!.split('@').first
+            : 'Pengguna');
 
     final currentUserId = SupabaseService().currentUser?.id;
     final isOwn = review.userId != null && review.userId == currentUserId;

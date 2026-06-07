@@ -93,12 +93,14 @@ class SupabaseService {
     String? comment,
   }) async {
     final user = _client.auth.currentUser;
+    final displayName = user?.userMetadata?['display_name'] as String?;
     await _client.from('reviews').insert({
       'place_id': placeId,
       'user_id': user?.id,
       'rating': rating.toInt(),
       'comment': comment,
-      'user_email': user?.email, 
+      'user_email': user?.email,
+      'user_name': displayName ?? user?.email?.split('@').first, 
     });
   }
 
@@ -109,38 +111,6 @@ class SupabaseService {
         .delete()
         .eq('id', reviewId);
   }
-
-  // // ─────────────────────────────────────────
-  // // AUTH (opsional - jika pakai login)
-  // // ─────────────────────────────────────────
-
-  // User? get currentUser => _client.auth.currentUser;
-  // bool get isLoggedIn => currentUser != null;
-
-  // Future<AuthResponse> signIn(String email, String password) async {
-  //   return await _client.auth.signInWithPassword(
-  //     email: email,
-  //     password: password,
-  //   );
-  // }
-
-  // Future<AuthResponse> signUp(String email, String password) async {
-  //   return await _client.auth.signUp(
-  //     email: email,
-  //     password: password,
-  //   );
-  // }
-
-  // Future<void> signOut() async {
-  //   await _client.auth.signOut();
-  // }
-
-  // Stream<AuthState> get authStateChanges =>
-  //     _client.auth.onAuthStateChange;
-
-
-
-
 
   // ─────────────────────────────────────────
   // AUTH (opsional - jika pakai login)
