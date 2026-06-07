@@ -9,7 +9,6 @@ class Place {
   final String? photoUrl;
   final double? rating;
   final String? openHours;   // contoh: "08:00 - 21:00"
-  final String? priceRange;  // contoh: "Rp 10.000 - 30.000"
   final String? categoryName; // join dari tabel categories
 
   // Dihitung saat runtime, bukan dari DB
@@ -26,7 +25,6 @@ class Place {
     this.photoUrl,
     this.rating,
     this.openHours,
-    this.priceRange,
     this.categoryName,
     this.distanceMeters,
   });
@@ -42,8 +40,7 @@ class Place {
       description: json['description'] as String?,
       photoUrl: json['photo_url'] as String?,
       rating: json['rating'] != null ? (json['rating'] as num).toDouble() : null,
-      openHours: json['open_hours'] as String?,
-      priceRange: json['price_range'] as String?,
+      openHours: json['opening_hours'] as String?,
       // Ambil dari join: categories!inner(name)
       categoryName: json['categories'] != null
           ? (json['categories'] as Map<String, dynamic>)['name'] as String?
@@ -62,7 +59,6 @@ class Place {
         'photo_url': photoUrl,
         'rating': rating,
         'open_hours': openHours,
-        'price_range': priceRange,
       };
 
   String get distanceText {

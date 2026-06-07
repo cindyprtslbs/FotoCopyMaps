@@ -403,45 +403,15 @@ class _DetailScreenState extends State<DetailScreen> {
                   // ── Info Card ─────────────────────
                   _Card(
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         if (place.address != null)
                           _InfoRow(
                               icon: Icons.location_on_outlined,
                               label: place.address!),
-                        if (place.address != null &&
-                            (place.openHours != null ||
-                                place.priceRange != null))
-                          const _HDivider(),
-                        if (place.openHours != null)
-                          _InfoRow(
-                              icon: Icons.access_time_rounded,
-                              label: place.openHours!),
-                        if (place.openHours != null && place.priceRange != null)
-                          const _HDivider(),
-                        if (place.priceRange != null)
-                          _InfoRow(
-                              icon: Icons.payments_outlined,
-                              label: place.priceRange!),
-                      ],
-                    ),
-                  ),
-
-                  // ── Deskripsi ─────────────────────
-                  if (place.description != null) ...[
-                    const SizedBox(height: 12),
-                    _Card(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Tentang Tempat',
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.bold,
-                              color: _kDark,
-                            ),
-                          ),
-                          const SizedBox(height: 10),
+                        if (place.description != null) ...[
+                          if (place.address != null) const _HDivider(),
+                          const SizedBox(height: 8),
                           Text(
                             place.description!,
                             style: TextStyle(
@@ -451,9 +421,16 @@ class _DetailScreenState extends State<DetailScreen> {
                             ),
                           ),
                         ],
-                      ),
+                        if (place.openHours != null) ...[
+                          if (place.address != null || place.description != null)
+                            const _HDivider(),
+                          _InfoRow(
+                              icon: Icons.access_time_rounded,
+                              label: place.openHours!),
+                        ],
+                      ],
                     ),
-                  ],
+                  ),
 
                   const SizedBox(height: 20),
 
