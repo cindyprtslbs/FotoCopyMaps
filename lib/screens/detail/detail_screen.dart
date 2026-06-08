@@ -169,7 +169,7 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: const Text('Review berhasil dikirim! Terima kasih ulasannya 🎉'),
+            content: const Text('Review berhasil dikirim! Terima kasih ulasannya'),
             backgroundColor: const Color(0xFF22C55E), // Fintech Success Green
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),

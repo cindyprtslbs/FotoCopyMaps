@@ -61,89 +61,125 @@ class _BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primary = Color(0xFF3B82F6);
     const items = [
-      {'icon': Icons.home_rounded, 'label': 'Home'},
-      {'icon': Icons.favorite_rounded, 'label': 'Favorite'},
-      {'icon': Icons.person_rounded, 'label': 'Profile'},
+      {
+        'iconUnselected': Icons.home_outlined,
+        'iconSelected': Icons.home_rounded,
+        'label': 'Home'
+      },
+      {
+        'iconUnselected': Icons.favorite_border_rounded,
+        'iconSelected': Icons.favorite_rounded,
+        'label': 'Favorite'
+      },
+      {
+        'iconUnselected': Icons.person_outline_rounded,
+        'iconSelected': Icons.person_rounded,
+        'label': 'Profile'
+      },
     ];
 
     return SafeArea(
       child: Container(
         margin: const EdgeInsets.fromLTRB(24, 0, 24, 16),
-        height: 72,
-        decoration: BoxDecoration(
-          color: _bgColor,
-          borderRadius: BorderRadius.circular(36),
-          boxShadow: [
-            BoxShadow(
-              color: _shadowDark.withOpacity(0.6),
-              offset: const Offset(8, 8),
-              blurRadius: 16,
+        height: 85, // Tinggi total untuk memberi ruang pada item yang menonjol ke atas
+        child: Stack(
+          alignment: Alignment.bottomCenter,
+          children: [
+            // Background Pill Putih
+            Container(
+              height: 64, // Tinggi asli kapsul putih
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(32),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFD1D9E6).withOpacity(0.6),
+                    offset: const Offset(0, 10),
+                    blurRadius: 24,
+                  ),
+                  const BoxShadow(
+                    color: Colors.white,
+                    offset: Offset(-4, -4),
+                    blurRadius: 16,
+                  ),
+                ],
+              ),
             ),
-            const BoxShadow(
-              color: _shadowLight,
-              offset: Offset(-8, -8),
-              blurRadius: 16,
+            
+            // Deretan Ikon Menu
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: List.generate(items.length, (i) {
+                final isSelected = i == currentIndex;
+                final iconUnselected = items[i]['iconUnselected'] as IconData;
+                final iconSelected = items[i]['iconSelected'] as IconData;
+                final label = items[i]['label'] as String;
+
+                return GestureDetector(
+                  onTap: () => onTap(i),
+                  behavior: HitTestBehavior.opaque,
+                  child: SizedBox(
+                    width: 70,
+                    height: 85,
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        // Teks (Muncul saat tidak dipilih, turun & hilang saat dipilih)
+                        AnimatedPositioned(
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeOutCubic,
+                          bottom: isSelected ? -10 : 10,
+                          child: AnimatedOpacity(
+                            duration: const Duration(milliseconds: 200),
+                            opacity: isSelected ? 0.0 : 1.0,
+                            child: Text(
+                              label,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF94A3B8),
+                              ),
+                            ),
+                          ),
+                        ),
+                        // Lingkaran Ikon Utama (Berpindah ke atas dan ganti warna saat dipilih)
+                        AnimatedPositioned(
+                          duration: const Duration(milliseconds: 250),
+                          curve: Curves.easeOutBack,
+                          top: isSelected ? 2 : 24,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 250),
+                            width: isSelected ? 56 : 40,
+                            height: isSelected ? 56 : 40,
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? const Color(0xFF1C1F2E) // Warna biru dongker super gelap meniru referensi
+                                  : Colors.transparent,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: Colors.white,
+                                // Border putih tebal ini menutupi tepi kapsul di bawahnya 
+                                // sehingga menciptakan ilusi lengkungan yang menyatu sempurna.
+                                width: isSelected ? 6 : 0, 
+                              ),
+                            ),
+                            child: Icon(
+                              isSelected ? iconSelected : iconUnselected,
+                              color: isSelected
+                                  ? const Color(0xFFFFC107) // Kuning emas
+                                  : const Color(0xFF94A3B8), // Abu-abu pudar
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              }),
             ),
           ],
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-          children: List.generate(items.length, (i) {
-            final isSelected = i == currentIndex;
-            final icon = items[i]['icon'] as IconData;
-            final label = items[i]['label'] as String;
-
-            return GestureDetector(
-              onTap: () => onTap(i),
-              behavior: HitTestBehavior.opaque,
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 250),
-                curve: Curves.easeInOutCubic,
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? Colors.white : Colors.transparent,
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: isSelected
-                      ? [
-                          BoxShadow(
-                            color: _shadowDark.withOpacity(0.3),
-                            offset: const Offset(4, 4),
-                            blurRadius: 8,
-                          ),
-                          const BoxShadow(
-                            color: Colors.white,
-                            offset: Offset(-4, -4),
-                            blurRadius: 8,
-                          )
-                        ]
-                      : [],
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      icon,
-                      color: isSelected ? primary : _secondaryText,
-                      size: 24,
-                    ),
-                    if (isSelected) ...[
-                      const SizedBox(width: 8),
-                      Text(
-                        label,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: primary,
-                        ),
-                      ),
-                    ]
-                  ],
-                ),
-              ),
-            );
-          }),
         ),
       ),
     );
@@ -461,7 +497,7 @@ class _HomeTabState extends State<_HomeTab> {
               const SliverFillRemaining(child: _EmptyView())
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 140), // Jarak bawah ditambah agar item terakhir tidak tertutup
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
@@ -489,7 +525,7 @@ class _HomeTabState extends State<_HomeTab> {
       
       // Floating Map Button (Neumorphic)
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 80.0), // Above bottom nav
+        padding: const EdgeInsets.only(bottom: 110.0), // Jarak ditingkatkan agar berada di atas nav bar
         child: Container(
           height: 56,
           width: 56,
@@ -677,7 +713,7 @@ class _FavoriteTabState extends State<_FavoriteTab> {
               )
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 140), // Jarak bawah ditambah
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
@@ -965,7 +1001,7 @@ class _ProfileTabState extends State<_ProfileTab> {
                     ),
                   ),
 
-                  const SizedBox(height: 100), // padding for bottom nav
+                  const SizedBox(height: 140), // padding bawah untuk menghindari bottom nav
                 ],
               ),
             ),
