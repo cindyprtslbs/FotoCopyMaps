@@ -1,5 +1,3 @@
-// lib/screens/home/home_screen.dart
-
 import 'package:flutter/material.dart';
 import '../../models/place_model.dart';
 import '../../models/category_model.dart';
@@ -13,6 +11,12 @@ import '../../services/favorites_service.dart';
 import '../auth/login_screen.dart';
 import '../profile/edit_profile.dart';
 import '../profile/help_screen.dart';
+
+const Color _bgColor = Color(0xFFF0F4F8);
+const Color _shadowDark = Color(0xFFD1D9E6);
+const Color _shadowLight = Colors.white;
+const Color _primaryText = Color(0xFF1E293B);
+const Color _secondaryText = Color(0xFF64748B);
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -33,6 +37,8 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      extendBody: true, // Required for the floating bottom nav effect
+      backgroundColor: _bgColor,
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
@@ -46,7 +52,7 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // ─────────────────────────────────────────────────────────
-// BOTTOM NAV
+// BOTTOM NAV (Neumorphic Floating Pill)
 // ─────────────────────────────────────────────────────────
 class _BottomNav extends StatelessWidget {
   final int currentIndex;
@@ -55,77 +61,89 @@ class _BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const primary = Color(0xFF3B6FE8);
+    const primary = Color(0xFF3B82F6);
     const items = [
       {'icon': Icons.home_rounded, 'label': 'Home'},
       {'icon': Icons.favorite_rounded, 'label': 'Favorite'},
       {'icon': Icons.person_rounded, 'label': 'Profile'},
     ];
 
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 20,
-            offset: const Offset(0, -4),
-          ),
-        ],
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 64,
-          child: Row(
-            children: List.generate(items.length, (i) {
-              final isSelected = i == currentIndex;
-              final icon = items[i]['icon'] as IconData;
-              final label = items[i]['label'] as String;
+    return SafeArea(
+      child: Container(
+        margin: const EdgeInsets.fromLTRB(24, 0, 24, 16),
+        height: 72,
+        decoration: BoxDecoration(
+          color: _bgColor,
+          borderRadius: BorderRadius.circular(36),
+          boxShadow: [
+            BoxShadow(
+              color: _shadowDark.withOpacity(0.6),
+              offset: const Offset(8, 8),
+              blurRadius: 16,
+            ),
+            const BoxShadow(
+              color: _shadowLight,
+              offset: Offset(-8, -8),
+              blurRadius: 16,
+            ),
+          ],
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: List.generate(items.length, (i) {
+            final isSelected = i == currentIndex;
+            final icon = items[i]['icon'] as IconData;
+            final label = items[i]['label'] as String;
 
-              return Expanded(
-                child: GestureDetector(
-                  onTap: () => onTap(i),
-                  behavior: HitTestBehavior.opaque,
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        AnimatedContainer(
-                          duration: const Duration(milliseconds: 200),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isSelected
-                                ? primary.withOpacity(0.12)
-                                : Colors.transparent,
-                            borderRadius: BorderRadius.circular(20),
+            return GestureDetector(
+              onTap: () => onTap(i),
+              behavior: HitTestBehavior.opaque,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 250),
+                curve: Curves.easeInOutCubic,
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                decoration: BoxDecoration(
+                  color: isSelected ? Colors.white : Colors.transparent,
+                  borderRadius: BorderRadius.circular(24),
+                  boxShadow: isSelected
+                      ? [
+                          BoxShadow(
+                            color: _shadowDark.withOpacity(0.3),
+                            offset: const Offset(4, 4),
+                            blurRadius: 8,
                           ),
-                          child: Icon(
-                            icon,
-                            color: isSelected ? primary : Colors.grey.shade400,
-                            size: 24,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          label,
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: isSelected
-                                ? FontWeight.w600
-                                : FontWeight.normal,
-                            color: isSelected ? primary : Colors.grey.shade400,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                          const BoxShadow(
+                            color: Colors.white,
+                            offset: Offset(-4, -4),
+                            blurRadius: 8,
+                          )
+                        ]
+                      : [],
                 ),
-              );
-            }),
-          ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      icon,
+                      color: isSelected ? primary : _secondaryText,
+                      size: 24,
+                    ),
+                    if (isSelected) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        label,
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w700,
+                          color: primary,
+                        ),
+                      ),
+                    ]
+                  ],
+                ),
+              ),
+            );
+          }),
         ),
       ),
     );
@@ -211,61 +229,73 @@ class _HomeTabState extends State<_HomeTab> {
     final name = displayName ?? (email.isNotEmpty ? email.split('@').first : 'Pengguna');
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FF),
+      backgroundColor: _bgColor,
       body: RefreshIndicator(
         onRefresh: _init,
-        color: const Color(0xFF3B6FE8),
+        color: const Color(0xFF3B82F6),
+        backgroundColor: Colors.white,
         child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
           slivers: [
-            // ── Header Gradient ──────────────────────
+            // ── Header Gradient Card ──────────────────────
             SliverToBoxAdapter(
               child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF3B6FE8), Color(0xFF1CB8C8)],
+                    colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
                   ),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(28),
-                    bottomRight: Radius.circular(28),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(40),
+                    bottomRight: Radius.circular(40),
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF3B82F6).withOpacity(0.3),
+                      offset: const Offset(0, 10),
+                      blurRadius: 24,
+                    ),
+                  ],
                 ),
                 padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).padding.top + 16,
-                  left: 20,
-                  right: 20,
-                  bottom: 28,
+                  top: MediaQuery.of(context).padding.top + 20,
+                  left: 24,
+                  right: 24,
+                  bottom: 32,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                'Halo, $name 👋',
+                                'Halo, $name',
                                 style: const TextStyle(
-                                  fontSize: 22,
-                                  fontWeight: FontWeight.bold,
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w800,
                                   color: Colors.white,
+                                  letterSpacing: 0.5,
                                 ),
                               ),
-                              const SizedBox(height: 4),
+                              const SizedBox(height: 6),
                               const Text(
                                 'Temukan tempat di sekitar kampus',
                                 style: TextStyle(
-                                  fontSize: 13,
+                                  fontSize: 14,
                                   color: Colors.white70,
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        // Tombol peta
+                        // Neumorphic Inner Map Button
                         GestureDetector(
                           onTap: () => Navigator.push(
                             context,
@@ -274,33 +304,36 @@ class _HomeTabState extends State<_HomeTab> {
                             ),
                           ),
                           child: Container(
-                            padding: const EdgeInsets.all(10),
+                            padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(14),
+                              color: Colors.white.withOpacity(0.15),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(
+                                color: Colors.white.withOpacity(0.2),
+                                width: 1,
+                              ),
                             ),
                             child: const Icon(
-                              Icons.map_outlined,
+                              Icons.map_rounded,
                               color: Colors.white,
-                              size: 22,
+                              size: 24,
                             ),
                           ),
                         ),
                       ],
                     ),
 
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 28),
 
-                    // Search bar di dalam header
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.08),
-                            blurRadius: 12,
-                            offset: const Offset(0, 4),
+                            color: Colors.black.withOpacity(0.1),
+                            blurRadius: 16,
+                            offset: const Offset(0, 8),
                           ),
                         ],
                       ),
@@ -311,24 +344,24 @@ class _HomeTabState extends State<_HomeTab> {
                           if (v.isEmpty) _loadPlaces();
                           setState(() {});
                         },
-                        style: const TextStyle(
-                          fontSize: 14,
-                          color: Color(0xFF1A1A2E),
+                        style: TextStyle(
+                          fontSize: 15,
+                          color: _primaryText,
                         ),
                         decoration: InputDecoration(
-                          hintText: 'Cari tempat…',
+                          hintText: 'Cari tempat fotocopy...',
                           hintStyle: TextStyle(
-                            color: Colors.grey.shade400,
+                            color: _secondaryText.withOpacity(0.6),
                             fontSize: 14,
                           ),
                           prefixIcon: Icon(
-                            Icons.search,
-                            color: Colors.grey.shade400,
+                            Icons.search_rounded,
+                            color: const Color(0xFF3B82F6),
                           ),
                           suffixIcon: _searchController.text.isNotEmpty
                               ? IconButton(
-                                  icon: Icon(Icons.clear,
-                                      color: Colors.grey.shade400),
+                                  icon: Icon(Icons.clear_rounded,
+                                      color: _secondaryText),
                                   onPressed: () {
                                     _searchController.clear();
                                     _loadPlaces();
@@ -337,25 +370,14 @@ class _HomeTabState extends State<_HomeTab> {
                                 )
                               : null,
                           filled: true,
-                          fillColor: Colors.white,
+                          fillColor: Colors.transparent,
                           border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
+                            borderRadius: BorderRadius.circular(20),
                             borderSide: BorderSide.none,
-                          ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: BorderSide.none,
-                          ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(14),
-                            borderSide: const BorderSide(
-                              color: Color(0xFF3B6FE8),
-                              width: 1.5,
-                            ),
                           ),
                           contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
+                            horizontal: 20,
+                            vertical: 18,
                           ),
                         ),
                       ),
@@ -365,16 +387,14 @@ class _HomeTabState extends State<_HomeTab> {
               ),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 16)),
-
-            // ── Filter Kategori ──────────────────────
             if (_categories.isNotEmpty)
               SliverToBoxAdapter(
                 child: SizedBox(
-                  height: 44,
+                  height: 48,
                   child: ListView(
                     scrollDirection: Axis.horizontal,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
                     children: [
                       CategoryChip(
                         label: 'Semua',
@@ -393,29 +413,29 @@ class _HomeTabState extends State<_HomeTab> {
                 ),
               ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+            const SliverToBoxAdapter(child: SizedBox(height: 24)),
 
-            // ── Label section ────────────────────────
             SliverToBoxAdapter(
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Tempat Terdekat',
                       style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFF1A1A2E),
+                        fontSize: 18,
+                        fontWeight: FontWeight.w800,
+                        color: _primaryText,
                       ),
                     ),
                     if (!_isLoading)
                       Text(
                         '${_places.length} tempat',
                         style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey.shade500,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF3B82F6),
                         ),
                       ),
                   ],
@@ -423,14 +443,13 @@ class _HomeTabState extends State<_HomeTab> {
               ),
             ),
 
-            const SliverToBoxAdapter(child: SizedBox(height: 12)),
+            const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-            // ── Konten ───────────────────────────────
             if (_isLoading)
               const SliverFillRemaining(
                 child: Center(
                   child: CircularProgressIndicator(
-                    color: Color(0xFF3B6FE8),
+                    color: Color(0xFF3B82F6),
                   ),
                 ),
               )
@@ -442,17 +461,20 @@ class _HomeTabState extends State<_HomeTab> {
               const SliverFillRemaining(child: _EmptyView())
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       final place = _places[index];
-                      return PlaceCard(
-                        place: place,
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => DetailScreen(place: place),
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: PlaceCard(
+                          place: place,
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => DetailScreen(place: place),
+                            ),
                           ),
                         ),
                       );
@@ -464,14 +486,38 @@ class _HomeTabState extends State<_HomeTab> {
           ],
         ),
       ),
-
-      floatingActionButton: FloatingActionButton(
-        onPressed: () => Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => MapScreen(places: _places)),
+      
+      // Floating Map Button (Neumorphic)
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 80.0), // Above bottom nav
+        child: Container(
+          height: 56,
+          width: 56,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: const LinearGradient(
+              colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF3B82F6).withOpacity(0.4),
+                offset: const Offset(4, 8),
+                blurRadius: 16,
+              ),
+            ],
+          ),
+          child: FloatingActionButton(
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => MapScreen(places: _places)),
+            ),
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            child: const Icon(Icons.map_rounded, color: Colors.white, size: 26),
+          ),
         ),
-        backgroundColor: const Color(0xFF3B6FE8),
-        child: const Icon(Icons.map, color: Colors.white),
       ),
     );
   }
@@ -515,10 +561,8 @@ class _FavoriteTabState extends State<_FavoriteTab> {
         if (mounted) setState(() { _favPlaces = []; _isLoading = false; });
         return;
       }
-      // Ambil semua places lalu filter by id
       final allPlaces = await _supabase.getPlaces();
       final favs = allPlaces.where((p) => ids.contains(p.id)).toList();
-      // Hitung jarak
       for (var p in favs) {
         p.distanceMeters = _location.distanceTo(p);
       }
@@ -530,51 +574,61 @@ class _FavoriteTabState extends State<_FavoriteTab> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FF),
+      backgroundColor: _bgColor,
       body: RefreshIndicator(
         onRefresh: _loadFavorites,
-        color: const Color(0xFF3B6FE8),
+        color: const Color(0xFF3B82F6),
+        backgroundColor: Colors.white,
         child: CustomScrollView(
+          physics: const BouncingScrollPhysics(),
           slivers: [
-            // ── Header ──────────────────────────
             SliverToBoxAdapter(
               child: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
+                margin: const EdgeInsets.only(bottom: 16),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF3B6FE8), Color(0xFF1CB8C8)],
+                    colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
                   ),
-                  borderRadius: BorderRadius.only(
-                    bottomLeft: Radius.circular(28),
-                    bottomRight: Radius.circular(28),
+                  borderRadius: const BorderRadius.only(
+                    bottomLeft: Radius.circular(40),
+                    bottomRight: Radius.circular(40),
                   ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFF3B82F6).withOpacity(0.3),
+                      offset: const Offset(0, 10),
+                      blurRadius: 24,
+                    ),
+                  ],
                 ),
                 padding: EdgeInsets.only(
-                  top: MediaQuery.of(context).padding.top + 16,
-                  left: 20,
-                  right: 20,
-                  bottom: 28,
+                  top: MediaQuery.of(context).padding.top + 20,
+                  left: 24,
+                  right: 24,
+                  bottom: 32,
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
-                      'Favorit',
+                      'Tersimpan',
                       style: TextStyle(
-                        fontSize: 22,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 26,
+                        fontWeight: FontWeight.w800,
                         color: Colors.white,
+                        letterSpacing: 0.5,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       _isLoading
-                          ? 'Memuat...'
+                          ? 'Memuat data...'
                           : _favPlaces.isEmpty
-                              ? 'Tempat yang kamu simpan'
-                              : '${_favPlaces.length} tempat tersimpan',
-                      style: const TextStyle(fontSize: 13, color: Colors.white70),
+                              ? 'Belum ada tempat yang disimpan'
+                              : '${_favPlaces.length} tempat favorit kamu',
+                      style: const TextStyle(fontSize: 14, color: Colors.white70),
                     ),
                   ],
                 ),
@@ -583,11 +637,10 @@ class _FavoriteTabState extends State<_FavoriteTab> {
 
             const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-            // ── Konten ──────────────────────────
             if (_isLoading)
               const SliverFillRemaining(
                 child: Center(
-                  child: CircularProgressIndicator(color: Color(0xFF3B6FE8)),
+                  child: CircularProgressIndicator(color: Color(0xFF3B82F6)),
                 ),
               )
             else if (_favPlaces.isEmpty)
@@ -597,43 +650,52 @@ class _FavoriteTabState extends State<_FavoriteTab> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(
-                        Icons.favorite_border_rounded,
-                        size: 72,
-                        color: Color(0xFFD0D8F0),
+                        Icons.bookmark_border_rounded,
+                        size: 80,
+                        color: Color(0xFFCBD5E1),
                       ),
                       SizedBox(height: 16),
                       Text(
                         'Belum ada favorit',
                         style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF1A1A2E),
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF475569),
                         ),
                       ),
                       SizedBox(height: 8),
+                      Text(
+                        'Tempat yang kamu simpan akan muncul di sini',
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Color(0xFF94A3B8),
+                        ),
+                      ),
                     ],
                   ),
                 ),
               )
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                padding: const EdgeInsets.fromLTRB(24, 0, 24, 100),
                 sliver: SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       final place = _favPlaces[index];
-                      return PlaceCard(
-                        place: place,
-                        onTap: () async {
-                          await Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => DetailScreen(place: place),
-                            ),
-                          );
-                          // Refresh setelah kembali (user mungkin un-favorite)
-                          _loadFavorites();
-                        },
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 16.0),
+                        child: PlaceCard(
+                          place: place,
+                          onTap: () async {
+                            await Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => DetailScreen(place: place),
+                              ),
+                            );
+                            _loadFavorites();
+                          },
+                        ),
                       );
                     },
                     childCount: _favPlaces.length,
@@ -648,7 +710,7 @@ class _FavoriteTabState extends State<_FavoriteTab> {
 }
 
 // ─────────────────────────────────────────────────────────
-// PROFILE TAB
+// PROFILE TAB (Full Neumorphic Styling)
 // ─────────────────────────────────────────────────────────
 
 class _ProfileTab extends StatefulWidget {
@@ -684,22 +746,20 @@ class _ProfileTabState extends State<_ProfileTab> {
         onSave: (newName) async {
           try {
             setState(() => _isLoading = true);
-            
-            // Update ke Supabase
             await SupabaseService().updateUserProfile(
               displayName: newName,
               username: newName.toLowerCase().replaceAll(' ', '_'),
             );
-            
-            // Refresh data lokal
             _loadUserData();
             
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Profil berhasil diperbarui'),
-                  backgroundColor: Colors.green,
-                  duration: Duration(seconds: 2),
+                SnackBar(
+                  content: const Text('Profil berhasil diperbarui'),
+                  backgroundColor: const Color(0xFF22C55E), // Fintech Green
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  margin: const EdgeInsets.all(24),
                 ),
               );
             }
@@ -708,8 +768,10 @@ class _ProfileTabState extends State<_ProfileTab> {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text('Gagal memperbarui profil: $e'),
-                  backgroundColor: Colors.red,
-                  duration: const Duration(seconds: 2),
+                  backgroundColor: const Color(0xFFEF4444), // Fintech Red
+                  behavior: SnackBarBehavior.floating,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  margin: const EdgeInsets.all(24),
                 ),
               );
             }
@@ -723,69 +785,90 @@ class _ProfileTabState extends State<_ProfileTab> {
 
   @override
   Widget build(BuildContext context) {
-    const primary = Color(0xFF3B6FE8);
-
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FF),
+      backgroundColor: _bgColor,
       body: CustomScrollView(
+        physics: const BouncingScrollPhysics(),
         slivers: [
-          // ── Header ──────────────────────────────
           SliverToBoxAdapter(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [Color(0xFF3B6FE8), Color(0xFF1CB8C8)],
-                ),
-                borderRadius: BorderRadius.only(
-                  bottomLeft: Radius.circular(28),
-                  bottomRight: Radius.circular(28),
-                ),
-              ),
+            child: Padding(
               padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 20,
-                left: 20,
-                right: 20,
-                bottom: 32,
+                top: MediaQuery.of(context).padding.top + 40,
+                left: 24,
+                right: 24,
+                bottom: 24,
               ),
               child: Column(
                 children: [
-                  // Avatar
+                  // Neumorphic Avatar
                   Container(
-                    width: 80,
-                    height: 80,
+                    width: 110,
+                    height: 110,
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.25),
+                      color: _bgColor,
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 3),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _shadowDark.withOpacity(0.5),
+                          offset: const Offset(8, 8),
+                          blurRadius: 16,
+                        ),
+                        const BoxShadow(
+                          color: _shadowLight,
+                          offset: Offset(-8, -8),
+                          blurRadius: 16,
+                        ),
+                      ],
                     ),
                     child: Center(
-                      child: Text(
-                        _userName.isNotEmpty ? _userName[0].toUpperCase() : '?',
-                        style: const TextStyle(
-                          fontSize: 32,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
+                      child: Container(
+                        width: 90,
+                        height: 90,
+                        decoration: const BoxDecoration(
+                          shape: BoxShape.circle,
+                          gradient: LinearGradient(
+                            colors: [Color(0xFF3B82F6), Color(0xFF1E3A8A)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                        ),
+                        child: Center(
+                          child: Text(
+                            _userName.isNotEmpty ? _userName[0].toUpperCase() : '?',
+                            style: const TextStyle(
+                              fontSize: 36,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.white,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 24),
+                  
                   Text(
                     _userName,
-                    style: const TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: _primaryText,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    _userEmail,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: Colors.white70,
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE2E8F0),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      _userEmail,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.w600,
+                        color: _secondaryText,
+                      ),
                     ),
                   ),
                 ],
@@ -793,23 +876,34 @@ class _ProfileTabState extends State<_ProfileTab> {
             ),
           ),
 
-          const SliverToBoxAdapter(child: SizedBox(height: 20)),
+          const SliverToBoxAdapter(child: SizedBox(height: 16)),
 
-          // ── Menu Items ──────────────────────────
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 24),
               child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  Text(
+                    'Pengaturan Akun',
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: _secondaryText,
+                      letterSpacing: 1,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  
                   _ProfileMenuItem(
                     icon: Icons.person_outline_rounded,
                     label: 'Edit Profil',
                     onTap: _showEditProfile,
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 16),
                   _ProfileMenuItem(
                     icon: Icons.help_outline_rounded,
-                    label: 'Bantuan',
+                    label: 'Pusat Bantuan',
                     onTap: () {
                       Navigator.push(
                         context,
@@ -819,45 +913,59 @@ class _ProfileTabState extends State<_ProfileTab> {
                       );
                     },
                   ),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 32),
 
-                  // Logout button
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton.icon(
-                      onPressed: () async {
-                        await SupabaseService().signOut();
-                        if (context.mounted) {
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const LoginScreen(),
-                            ),
-                          );
-                        }
-                      },
-                      icon: const Icon(Icons.logout_rounded),
-                      label: const Text(
-                        'Keluar',
-                        style: TextStyle(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w600,
-                        ),
+                  // Neumorphic Logout Button
+                  GestureDetector(
+                    onTap: () async {
+                      await SupabaseService().signOut();
+                      if (context.mounted) {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const LoginScreen(),
+                          ),
+                        );
+                      }
+                    },
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      decoration: BoxDecoration(
+                        color: _bgColor,
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _shadowDark.withOpacity(0.5),
+                            offset: const Offset(6, 6),
+                            blurRadius: 12,
+                          ),
+                          const BoxShadow(
+                            color: _shadowLight,
+                            offset: Offset(-6, -6),
+                            blurRadius: 12,
+                          ),
+                        ],
                       ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red.shade50,
-                        foregroundColor: Colors.red.shade600,
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(14),
-                          side: BorderSide(color: Colors.red.shade100),
-                        ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.logout_rounded, color: Color(0xFFEF4444), size: 22),
+                          SizedBox(width: 10),
+                          Text(
+                            'Keluar Akun',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFEF4444), // Red for logout
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
 
-                  const SizedBox(height: 32),
+                  const SizedBox(height: 100), // padding for bottom nav
                 ],
               ),
             ),
@@ -869,7 +977,72 @@ class _ProfileTabState extends State<_ProfileTab> {
 }
 
 // ─────────────────────────────────────────────────────────
-// EDIT PROFILE DIALOG
+// PROFILE MENU ITEM (Neumorphic Card)
+// ─────────────────────────────────────────────────────────
+class _ProfileMenuItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _ProfileMenuItem({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: _bgColor,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: _shadowDark.withOpacity(0.4),
+              offset: const Offset(6, 6),
+              blurRadius: 12,
+            ),
+            const BoxShadow(
+              color: _shadowLight,
+              offset: Offset(-6, -6),
+              blurRadius: 12,
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: const Color(0xFFE0E7FF),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, color: const Color(0xFF3B82F6), size: 22),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                label,
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: _primaryText,
+                ),
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios_rounded, color: _secondaryText, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// EDIT PROFILE DIALOG (Soft UI)
 // ─────────────────────────────────────────────────────────
 class _EditProfileDialog extends StatefulWidget {
   final String currentName;
@@ -902,153 +1075,176 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
     super.dispose();
   }
 
+  InputDecoration _dialogInputDecoration({required String hint}) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: _secondaryText.withOpacity(0.6), fontSize: 14),
+      filled: true,
+      fillColor: const Color(0xFFF8FAFC),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 1.5),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(32)),
+      elevation: 24,
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
             Row(
               children: [
-                const Text(
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.edit_rounded, color: Color(0xFF3B82F6), size: 20),
+                ),
+                const SizedBox(width: 12),
+                Text(
                   'Edit Profil',
                   style: TextStyle(
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1A2E),
+                    fontWeight: FontWeight.w800,
+                    color: _primaryText,
                   ),
                 ),
                 const Spacer(),
-                InkWell(
+                GestureDetector(
                   onTap: () => Navigator.pop(context),
-                  child: const Icon(Icons.close_rounded, color: Colors.grey),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Icon(Icons.close_rounded, color: _secondaryText, size: 20),
+                  ),
                 ),
               ],
+            ),
+            const SizedBox(height: 28),
+
+            Text(
+              'Email (Tetap)',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _primaryText),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              enabled: false,
+              style: TextStyle(fontSize: 14, color: _secondaryText),
+              decoration: _dialogInputDecoration(hint: widget.currentEmail),
             ),
             const SizedBox(height: 20),
 
-            // Email field (read-only)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Email',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF666666),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: TextField(
-                    enabled: false,
-                    decoration: InputDecoration(
-                      hintText: widget.currentEmail,
-                      hintStyle: const TextStyle(color: Colors.grey),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.all(12),
-                    ),
-                  ),
-                ),
-              ],
+            Text(
+              'Nama Lengkap',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _primaryText),
             ),
-            const SizedBox(height: 16),
-
-            // Name field (editable)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Nama',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF666666),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  decoration: BoxDecoration(
-                    border: Border.all(color: Colors.grey.shade300),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: TextField(
-                    controller: _nameController,
-                    decoration: const InputDecoration(
-                      hintText: 'Masukkan nama Anda',
-                      hintStyle: TextStyle(color: Colors.grey),
-                      border: InputBorder.none,
-                      contentPadding: EdgeInsets.all(12),
-                    ),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 8),
+            TextField(
+              controller: _nameController,
+              style: TextStyle(fontSize: 15, color: _primaryText),
+              decoration: _dialogInputDecoration(hint: 'Masukkan nama Anda'),
             ),
-            const SizedBox(height: 24),
+            const SizedBox(height: 32),
 
-            // Buttons
             Row(
-              mainAxisAlignment: MainAxisAlignment.end,
               children: [
-                TextButton(
-                  onPressed: _isSaving ? null : () => Navigator.pop(context),
-                  child: const Text(
-                    'Batal',
-                    style: TextStyle(
-                      color: Colors.grey,
-                      fontWeight: FontWeight.w500,
+                Expanded(
+                  child: TextButton(
+                    onPressed: _isSaving ? null : () => Navigator.pop(context),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                    child: Text(
+                      'Batal',
+                      style: TextStyle(
+                        color: _secondaryText,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
+                      ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
-                ElevatedButton(
-                  onPressed: _isSaving
-                      ? null
-                      : () async {
-                          if (_nameController.text.isEmpty) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Nama tidak boleh kosong'),
-                                backgroundColor: Colors.red,
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: const Color(0xFF3B82F6).withOpacity(0.4),
+                          offset: const Offset(0, 4),
+                          blurRadius: 12,
+                        ),
+                      ],
+                    ),
+                    child: ElevatedButton(
+                      onPressed: _isSaving
+                          ? null
+                          : () async {
+                              if (_nameController.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text('Nama tidak boleh kosong'),
+                                    backgroundColor: const Color(0xFFEF4444),
+                                    behavior: SnackBarBehavior.floating,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                );
+                                return;
+                              }
+                              setState(() => _isSaving = true);
+                              await widget.onSave(_nameController.text.trim());
+                              if (mounted) Navigator.pop(context);
+                            },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: _isSaving
+                          ? const SizedBox(
+                              width: 20, height: 20,
+                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2.5),
+                            )
+                          : const Text(
+                              'Simpan',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
                               ),
-                            );
-                            return;
-                          }
-
-                          setState(() => _isSaving = true);
-                          await widget.onSave(_nameController.text);
-                          if (mounted) {
-                            Navigator.pop(context);
-                          }
-                        },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF3B6FE8),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
+                            ),
                     ),
                   ),
-                  child: _isSaving
-                      ? const SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
-                          ),
-                        )
-                      : const Text('Simpan'),
                 ),
               ],
             ),
@@ -1060,63 +1256,7 @@ class _EditProfileDialogState extends State<_EditProfileDialog> {
 }
 
 // ─────────────────────────────────────────────────────────
-// PROFILE MENU ITEM
-// ─────────────────────────────────────────────────────────
-class _ProfileMenuItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final VoidCallback onTap;
-
-  const _ProfileMenuItem({
-    required this.icon,
-    required this.label,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Material(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(14),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(14),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-          child: Row(
-            children: [
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF0F3FF),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(icon, color: const Color(0xFF3B6FE8), size: 20),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Text(
-                  label,
-                  style: const TextStyle(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                ),
-              ),
-              Icon(Icons.chevron_right_rounded,
-                  color: Colors.grey.shade400, size: 20),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-// ─────────────────────────────────────────────────────────
-// HELPERS
+// HELPERS (Error & Empty States)
 // ─────────────────────────────────────────────────────────
 class _ErrorView extends StatelessWidget {
   final String message;
@@ -1127,30 +1267,39 @@ class _ErrorView extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(32),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Icon(Icons.wifi_off_rounded, size: 56, color: Colors.grey),
-            const SizedBox(height: 16),
-            const Text(
-              'Gagal memuat data',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFEE2E2),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.wifi_off_rounded, size: 40, color: Color(0xFFEF4444)),
             ),
-            const SizedBox(height: 8),
-            Text(message,
-                style: const TextStyle(color: Colors.grey),
-                textAlign: TextAlign.center),
             const SizedBox(height: 24),
+            Text(
+              'Gagal memuat data',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _primaryText),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              style: TextStyle(color: _secondaryText, fontSize: 14, height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 32),
             ElevatedButton.icon(
               onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Coba Lagi'),
+              icon: const Icon(Icons.refresh_rounded, size: 20),
+              label: const Text('Coba Lagi', style: TextStyle(fontWeight: FontWeight.w700)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF3B6FE8),
+                backgroundColor: const Color(0xFF3B82F6),
                 foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
           ],
@@ -1165,15 +1314,39 @@ class _EmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    return Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(Icons.location_off_outlined, size: 56, color: Colors.grey),
-          SizedBox(height: 16),
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              color: _bgColor,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: _shadowDark.withOpacity(0.5),
+                  offset: const Offset(6, 6),
+                  blurRadius: 12,
+                ),
+                const BoxShadow(
+                  color: _shadowLight,
+                  offset: Offset(-6, -6),
+                  blurRadius: 12,
+                ),
+              ],
+            ),
+            child: const Icon(Icons.location_off_rounded, size: 48, color: Color(0xFF94A3B8)),
+          ),
+          const SizedBox(height: 24),
           Text(
-            'Belum ada tempat ditemukan',
-            style: TextStyle(fontSize: 16, color: Colors.grey),
+            'Belum ada tempat',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700, color: _primaryText),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'Coba ubah kata kunci pencarianmu',
+            style: TextStyle(fontSize: 14, color: _secondaryText),
           ),
         ],
       ),

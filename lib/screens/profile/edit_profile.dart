@@ -1,6 +1,12 @@
 import 'package:flutter/material.dart';
 import '../../services/supabase_service.dart';
 
+// Tema Warna Neumorphism & Fintech
+const Color _bgColor = Color(0xFFF0F4F8);
+const Color _primaryText = Color(0xFF1E293B);
+const Color _secondaryText = Color(0xFF64748B);
+const Color _primary = Color(0xFF3B82F6);
+const Color _primaryDark = Color(0xFF1D4ED8);
 
 class EditProfile extends StatefulWidget {
   final String currentName;
@@ -65,9 +71,12 @@ class _EditProfileState extends State<EditProfile> {
           widget.onProfileUpdated();
           Navigator.pop(context);
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Profil berhasil diperbarui'),
-              backgroundColor: Color(0xFF3B6FE8),
+            SnackBar(
+              content: const Text('Profil berhasil diperbarui'),
+              backgroundColor: const Color(0xFF10B981), // Emerald Success
+              behavior: SnackBarBehavior.floating,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              margin: const EdgeInsets.all(24),
             ),
           );
         }
@@ -81,218 +90,216 @@ class _EditProfileState extends State<EditProfile> {
     }
   }
 
+  InputDecoration _softInputDecoration({required String hint, required IconData icon}) {
+    return InputDecoration(
+      hintText: hint,
+      hintStyle: TextStyle(color: _secondaryText.withOpacity(0.6), fontSize: 14),
+      prefixIcon: Icon(icon, color: _primary, size: 20),
+      filled: true,
+      fillColor: const Color(0xFFF8FAFC),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(16),
+        borderSide: const BorderSide(color: _primary, width: 1.5),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
+      backgroundColor: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+      elevation: 24,
       child: Padding(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Header
+            // ── Header ──
             Row(
               children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.edit_rounded, color: _primary, size: 20),
+                ),
+                const SizedBox(width: 12),
                 const Text(
                   'Edit Profil',
                   style: TextStyle(
                     fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF1A1A2E),
+                    fontWeight: FontWeight.w800,
+                    color: _primaryText,
                   ),
                 ),
                 const Spacer(),
-                IconButton(
-                  onPressed: () => Navigator.pop(context),
-                  icon: const Icon(Icons.close_rounded),
-                  color: Colors.grey.shade400,
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
-
-            // Error message
-            if (_error != null)
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: Colors.red.shade50,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: Colors.red.shade200),
-                ),
-                child: Row(
-                  children: [
-                    Icon(Icons.error_outline, color: Colors.red.shade600),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(
-                        _error!,
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.red.shade600,
-                        ),
-                      ),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(20),
                     ),
-                  ],
-                ),
-              ),
-            if (_error != null) const SizedBox(height: 16),
-
-            // Name Field
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Nama',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _nameController,
-                  enabled: !_isLoading,
-                  decoration: InputDecoration(
-                    hintText: 'Masukkan nama lengkap',
-                    hintStyle: TextStyle(color: Colors.grey.shade400),
-                    prefixIcon: const Icon(Icons.person_outline_rounded),
-                    prefixIconColor: const Color(0xFF3B6FE8),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF3B6FE8),
-                        width: 2,
-                      ),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-
-            // Username Field
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Username',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF1A1A2E),
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _usernameController,
-                  enabled: !_isLoading,
-                  decoration: InputDecoration(
-                    hintText: 'Masukkan username',
-                    hintStyle: TextStyle(color: Colors.grey.shade400),
-                    prefixIcon: const Icon(Icons.alternate_email_rounded),
-                    prefixIconColor: const Color(0xFF3B6FE8),
-                    filled: true,
-                    fillColor: Colors.white,
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.grey.shade300),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF3B6FE8),
-                        width: 2,
-                      ),
-                    ),
-                    contentPadding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 14,
-                    ),
+                    child: const Icon(Icons.close_rounded, color: _secondaryText, size: 20),
                   ),
                 ),
               ],
             ),
             const SizedBox(height: 24),
 
-            // Buttons
+            // ── Error Message ──
+            if (_error != null) ...[
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFFEF2F2),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFFFECACA)),
+                ),
+                child: Row(
+                  children: [
+                    const Icon(Icons.error_outline_rounded, color: Color(0xFFEF4444), size: 20),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        _error!,
+                        style: const TextStyle(fontSize: 13, color: Color(0xFFB91C1C)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+            ],
+
+            // ── Email Field (Read Only) ──
+            const Text(
+              'Email (Tetap)',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _primaryText),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              enabled: false,
+              style: const TextStyle(fontSize: 14, color: _secondaryText),
+              decoration: _softInputDecoration(
+                hint: widget.currentEmail,
+                icon: Icons.email_rounded,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // ── Name Field ──
+            const Text(
+              'Nama Lengkap',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _primaryText),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _nameController,
+              enabled: !_isLoading,
+              style: const TextStyle(fontSize: 15, color: _primaryText, fontWeight: FontWeight.w500),
+              decoration: _softInputDecoration(
+                hint: 'Masukkan nama lengkap',
+                icon: Icons.person_outline_rounded,
+              ),
+            ),
+            const SizedBox(height: 16),
+
+            // ── Username Field ──
+            const Text(
+              'Username',
+              style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _primaryText),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _usernameController,
+              enabled: !_isLoading,
+              style: const TextStyle(fontSize: 15, color: _primaryText, fontWeight: FontWeight.w500),
+              decoration: _softInputDecoration(
+                hint: 'Masukkan username',
+                icon: Icons.alternate_email_rounded,
+              ),
+            ),
+            const SizedBox(height: 32),
+
+            // ── Action Buttons ──
             Row(
               children: [
                 Expanded(
-                  child: ElevatedButton(
+                  child: TextButton(
                     onPressed: _isLoading ? null : () => Navigator.pop(context),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.grey.shade100,
-                      foregroundColor: Colors.grey.shade700,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                     child: const Text(
                       'Batal',
                       style: TextStyle(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
+                        color: _secondaryText,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 15,
                       ),
                     ),
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 16),
                 Expanded(
-                  child: ElevatedButton(
-                    onPressed: _isLoading ? null : _updateProfile,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF3B6FE8),
-                      foregroundColor: Colors.white,
-                      elevation: 0,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(16),
+                      gradient: const LinearGradient(
+                        colors: [_primary, _primaryDark],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: _primary.withOpacity(0.4),
+                          offset: const Offset(0, 4),
+                          blurRadius: 12,
+                        ),
+                      ],
                     ),
-                    child: _isLoading
-                        ? const SizedBox(
-                            height: 20,
-                            width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              valueColor:
-                                  AlwaysStoppedAnimation(Colors.white),
+                    child: ElevatedButton(
+                      onPressed: _isLoading ? null : _updateProfile,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.transparent,
+                        shadowColor: Colors.transparent,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      ),
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2.5,
+                                valueColor: AlwaysStoppedAnimation(Colors.white),
+                              ),
+                            )
+                          : const Text(
+                              'Simpan',
+                              style: TextStyle(
+                                fontSize: 15,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
                             ),
-                          )
-                        : const Text(
-                            'Simpan',
-                            style: TextStyle(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
+                    ),
                   ),
                 ),
               ],
