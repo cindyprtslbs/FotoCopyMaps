@@ -525,7 +525,7 @@ class _HomeTabState extends State<_HomeTab> {
       
       // Floating Map Button (Neumorphic)
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 110.0), // Jarak ditingkatkan agar berada di atas nav bar
+        padding: const EdgeInsets.only(bottom: 150.0), 
         child: Container(
           height: 56,
           width: 56,
