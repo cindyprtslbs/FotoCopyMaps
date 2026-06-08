@@ -808,18 +808,6 @@ class _ProfileTabState extends State<_ProfileTab> {
                   ),
                   const SizedBox(height: 10),
                   _ProfileMenuItem(
-                    icon: Icons.history_rounded,
-                    label: 'Riwayat Ulasan',
-                    onTap: () {},
-                  ),
-                  const SizedBox(height: 10),
-                  _ProfileMenuItem(
-                    icon: Icons.notifications_outlined,
-                    label: 'Notifikasi',
-                    onTap: () {},
-                  ),
-                  const SizedBox(height: 10),
-                  _ProfileMenuItem(
                     icon: Icons.help_outline_rounded,
                     label: 'Bantuan',
                     onTap: () {
