@@ -185,4 +185,43 @@ class SupabaseService {
     final profile = getUserProfile();
     return profile?['username'] as String?;
   }
+  
+  Future<List<ReviewHistoryItem>> getMyReviews() async {
+    final user = currentUser;
+
+    if (user == null) {
+      return [];
+    }
+
+    final response = await _client
+        .from('reviews')
+        .select('''
+          *,
+          places(*)
+        ''')
+        .eq('user_id', user.id)
+        .order('created_at', ascending: false);
+
+    return (response as List)
+        .map((e) => ReviewHistoryItem(
+              review: Review.fromJson(
+                e as Map<String, dynamic>,
+              ),
+              place: Place.fromJson(
+                e['places'] as Map<String, dynamic>,
+              ),
+            ))
+        .toList();
+  }
+
+}
+
+class ReviewHistoryItem {
+  final Review review;
+  final Place place;
+
+  ReviewHistoryItem({
+    required this.review,
+    required this.place,
+  });
 }

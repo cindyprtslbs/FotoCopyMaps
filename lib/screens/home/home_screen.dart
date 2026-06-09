@@ -11,6 +11,7 @@ import '../../services/favorites_service.dart';
 import '../auth/login_screen.dart';
 import '../profile/edit_profile.dart';
 import '../profile/help_screen.dart';
+import '../profile/review_history_screen.dart';
 
 const Color _bgColor = Color(0xFFF0F4F8);
 const Color _shadowDark = Color(0xFFD1D9E6);
@@ -937,6 +938,18 @@ class _ProfileTabState extends State<_ProfileTab> {
                     onTap: _showEditProfile,
                   ),
                   const SizedBox(height: 16),
+                  _ProfileMenuItem(
+                    icon: Icons.history_rounded,
+                    label: 'Riwayat Ulasan',
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ReviewHistoryScreen(),
+                        ),
+                      );
+                    },
+                  ),
                   _ProfileMenuItem(
                     icon: Icons.help_outline_rounded,
                     label: 'Pusat Bantuan',

@@ -71,4 +71,6 @@ class Place {
 
   @override
   String toString() => 'Place(id: $id, name: $name, lat: $lat, lng: $lng)';
+
+  static fromMap(e) {}
 }

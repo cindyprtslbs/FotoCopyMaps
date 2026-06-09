@@ -40,4 +40,6 @@ class Review {
         'rating': rating,
         'comment': comment,
       };
+
+  static fromMap(e) {}
 }
