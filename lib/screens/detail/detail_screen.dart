@@ -7,6 +7,7 @@ import '../../services/supabase_service.dart';
 import '../../services/location_service.dart';
 import '../../services/favorites_service.dart';
 import '../map/map_screen.dart';
+import '../map/route_screen.dart';
 
 // Tema Warna Neumorphism & Fintech
 const Color _bgColor = Color(0xFFF0F4F8);
@@ -133,24 +134,13 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
     if (mounted) setState(() => _loadingReviews = false);
   }
 
-  Future<void> _openRoute() async {
-    final pos = _location.lastPosition;
-    final success = await _location.openRoute(
-      destLat: widget.place.lat,
-      destLng: widget.place.lng,
-      originLat: pos?.latitude,
-      originLng: pos?.longitude,
+  void _openRoute() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => RouteScreen(destination: widget.place),
+      ),
     );
-    if (!success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('Tidak dapat membuka aplikasi peta di perangkat Anda.'),
-          backgroundColor: const Color(0xFFEF4444),
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        ),
-      );
-    }
   }
 
   Future<void> _submitReview() async {

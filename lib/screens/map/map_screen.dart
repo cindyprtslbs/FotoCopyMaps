@@ -8,6 +8,7 @@ import '../../services/location_service.dart';
 import '../../services/favorites_service.dart';
 import '../../utils/constants.dart';
 import '../detail/detail_screen.dart';
+import './route_screen.dart';
 
 // Tema Neumorphism Fintech
 const Color _bgColor = Color(0xFFF0F4F8);
@@ -456,12 +457,12 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
                       ),
                     ).then((_) => _loadFavorites());
                   },
-                  onRoute: () async {
-                    await LocationService().openRoute(
-                      destLat: _selectedPlace!.lat,
-                      destLng: _selectedPlace!.lng,
-                      originLat: _userLatLng?.latitude,
-                      originLng: _userLatLng?.longitude,
+                  onRoute: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => RouteScreen(destination: _selectedPlace!),
+                      ),
                     );
                   },
                   onClose: _deselectPlace,

@@ -65,33 +65,34 @@ class LocationService {
     return Geolocator.distanceBetween(startLat, startLng, endLat, endLng);
   }
 
-  /// Buka rute di Google Maps (intent URL)
+  /// Buka rute di OpenStreetMap (lewat browser)
   Future<bool> openRoute({
     required double destLat,
     required double destLng,
     double? originLat,
     double? originLng,
   }) async {
-    final origin = (originLat != null && originLng != null)
-        ? '${originLat.toStringAsFixed(6)},${originLng.toStringAsFixed(6)}'
-        : '';
-
-    // Coba Google Maps dulu
-    final googleMapsUrl = Uri.parse(
-      'https://www.google.com/maps/dir/$origin/'
-      '${destLat.toStringAsFixed(6)},${destLng.toStringAsFixed(6)}',
+    // Bangun URL OpenStreetMap Directions
+    // Format: https://www.openstreetmap.org/directions?from=lat,lng&to=lat,lng&engine=fossgis_osrm_car
+    final StringBuffer urlBuffer = StringBuffer(
+      'https://www.openstreetmap.org/directions?',
     );
 
-    // Fallback: geo: URI (buka di app peta apapun yang tersedia)
-    final geoUrl = Uri.parse(
-      'geo:${destLat.toStringAsFixed(6)},${destLng.toStringAsFixed(6)}'
-      '?q=${destLat.toStringAsFixed(6)},${destLng.toStringAsFixed(6)}',
+    if (originLat != null && originLng != null) {
+      urlBuffer.write(
+        'from=${originLat.toStringAsFixed(6)},${originLng.toStringAsFixed(6)}&',
+      );
+    }
+
+    urlBuffer.write(
+      'to=${destLat.toStringAsFixed(6)},${destLng.toStringAsFixed(6)}'
+      '&engine=fossgis_osrm_car',
     );
 
-    if (await canLaunchUrl(googleMapsUrl)) {
-      return await launchUrl(googleMapsUrl, mode: LaunchMode.externalApplication);
-    } else if (await canLaunchUrl(geoUrl)) {
-      return await launchUrl(geoUrl, mode: LaunchMode.externalApplication);
+    final osmUrl = Uri.parse(urlBuffer.toString());
+
+    if (await canLaunchUrl(osmUrl)) {
+      return await launchUrl(osmUrl, mode: LaunchMode.externalApplication);
     }
     return false;
   }
