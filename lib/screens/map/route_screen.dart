@@ -6,7 +6,7 @@ import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import '../../../models/place_model.dart';
 import '../../../services/location_service.dart';
-import '../../../utils/constants.dart';
+// import '../../../utils/constants.dart';
 
 // Tema warna konsisten dengan app
 const Color _bgColor      = Color(0xFFF0F4F8);

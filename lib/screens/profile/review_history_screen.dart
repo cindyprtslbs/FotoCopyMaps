@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../models/place_model.dart';
-import '../../models/review_model.dart';
+// import '../../models/place_model.dart';
+// import '../../models/review_model.dart';
 import '../../services/supabase_service.dart';
 import '../detail/detail_screen.dart';
 
