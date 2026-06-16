@@ -205,7 +205,7 @@ class _RouteScreenState extends State<RouteScreen> {
                       strokeWidth: 5.0,
                       color: _primary,
                       borderStrokeWidth: 2.0,
-                      borderColor: Colors.white.withOpacity(0.8),
+                      borderColor: Colors.white.withOpacity(0.1), // was 0.8
                     ),
                   ],
                 ),
@@ -382,7 +382,7 @@ class _RouteScreenState extends State<RouteScreen> {
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: [
                             BoxShadow(
-                              color: _primary.withOpacity(0.35),
+                              color: _primary.withOpacity(0.1), // was 0.35
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             )
@@ -480,7 +480,7 @@ class _RouteInfoCard extends StatelessWidget {
               Container(
                   width: 1,
                   height: 40,
-                  color: _shadowDark.withOpacity(0.4)),
+                  color: _shadowDark.withOpacity(0.1)), 
               Expanded(
                 child: _StatItem(
                   icon: Icons.access_time_rounded,
@@ -493,7 +493,7 @@ class _RouteInfoCard extends StatelessWidget {
               Container(
                   width: 1,
                   height: 40,
-                  color: _shadowDark.withOpacity(0.4)),
+                  color: _shadowDark.withOpacity(0.1)), // was 0.4
               Expanded(
                 child: _StatItem(
                   icon: Icons.directions_car_rounded,
@@ -507,7 +507,7 @@ class _RouteInfoCard extends StatelessWidget {
           ),
 
           const SizedBox(height: 16),
-          Divider(color: _shadowDark.withOpacity(0.4), height: 1),
+          Divider(color: _shadowDark.withOpacity(0.1), height: 1), // was 0.4
           const SizedBox(height: 16),
 
           // Tujuan
@@ -632,7 +632,7 @@ class _UserMarker extends StatelessWidget {
           width: 56,
           height: 56,
           decoration: BoxDecoration(
-            color: _primary.withOpacity(0.15),
+            color: _primary.withOpacity(0.08), // was 0.15
             shape: BoxShape.circle,
           ),
         ),
@@ -649,7 +649,7 @@ class _UserMarker extends StatelessWidget {
             border: Border.all(color: Colors.white, width: 3),
             boxShadow: [
               BoxShadow(
-                color: _primary.withOpacity(0.45),
+                color: _primary.withOpacity(0.1), // was 0.45
                 blurRadius: 12,
                 spreadRadius: 2,
               ),
@@ -682,7 +682,7 @@ class _DestinationMarker extends StatelessWidget {
             border: Border.all(color: Colors.white, width: 2.5),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFFEF4444).withOpacity(0.5),
+                color: const Color(0xFFEF4444).withOpacity(0.1), // was 0.5
                 blurRadius: 14,
                 spreadRadius: 2,
                 offset: const Offset(0, 4),
@@ -732,14 +732,16 @@ class _NeumorphicCard extends StatelessWidget {
         color: _bgColor,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
+          // Bayangan kanan-bawah (sudah rendah di 0.1)
           BoxShadow(
-            color: _shadowDark.withOpacity(0.6),
+            color: _shadowDark.withOpacity(0.1), 
             offset: const Offset(8, 8),
             blurRadius: 16,
           ),
-          const BoxShadow(
-            color: _shadowLight,
-            offset: Offset(-8, -8),
+          // Bayangan kiri-atas (DITURUNKAN OPACITY-NYA DI SINI)
+          BoxShadow(
+            color: Colors.white.withOpacity(0.5), // Ubah angka 0.5 sesuai kebutuhan
+            offset: const Offset(-8, -8),
             blurRadius: 16,
           ),
         ],
