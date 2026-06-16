@@ -43,18 +43,11 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
 
   // Nama user dari email (bagian sebelum @)
   String get _userName {
-  if (!_supabase.isLoggedIn) {
-      return "Masuk untuk memberi ulasan";
-    }
-
     final user = _supabase.currentUser;
-    final displayName = user?.userMetadata?['display_name'];
-
-    if (displayName != null && displayName.isNotEmpty) {
-      return displayName;
-    }
-
-    return user?.email?.split('@').first ?? "Pengguna";
+    final displayName = user?.userMetadata?['display_name'] as String?;
+    if (displayName != null && displayName.isNotEmpty) return displayName;
+    final email = user?.email ?? '';
+    return email.isNotEmpty ? email.split('@').first : 'Pengguna';
   }
 
   // Inisial untuk avatar
@@ -84,29 +77,59 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
   }
 
   Future<void> _toggleFavorite() async {
-  if (!_supabase.isLoggedIn) {
-    final login = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const LoginScreen(),
-      ),
-    );
+    // Cek login dulu
+    if (_supabase.currentUser == null) {
+      _showLoginRequiredDialog('favorit');
+      return;
+    }
 
-    if (!_supabase.isLoggedIn) return;
-  }
-
-  setState(() => _favoriteScale = 1.3);
-
-  Future.delayed(const Duration(milliseconds: 150), () {
-    if (mounted) {
-        setState(() => _favoriteScale = 1.0);
-      }
+    // Animasi klik memantul
+    setState(() => _favoriteScale = 1.3);
+    Future.delayed(const Duration(milliseconds: 150), () {
+      if (mounted) setState(() => _favoriteScale = 1.0);
     });
 
     final newStatus = await _favService.toggleFavorite(widget.place.id);
-
     if (mounted) {
       setState(() => _isFavorite = newStatus);
+      
+      // Feedback haptic visual dengan SnackBar elegan
+      ScaffoldMessenger.of(context).clearSnackBars();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  newStatus ? Icons.favorite_rounded : Icons.favorite_border_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  newStatus
+                      ? '${widget.place.name} ditambahkan ke favorit'
+                      : '${widget.place.name} dihapus dari favorit',
+                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                ),
+              ),
+            ],
+          ),
+          backgroundColor: newStatus ? _primary : const Color(0xFF475569),
+          behavior: SnackBarBehavior.floating,
+          elevation: 0,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          margin: const EdgeInsets.all(24),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -127,16 +150,125 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
     );
   }
 
-  Future<void> _submitReview() async {
-    if (!_supabase.isLoggedIn) {
-      await Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => const LoginScreen(),
+  /// Dialog yang muncul saat pengguna belum login dan mencoba fitur terkunci.
+  void _showLoginRequiredDialog(String feature) {
+    showDialog(
+      context: context,
+      builder: (ctx) => Dialog(
+        backgroundColor: Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        elevation: 24,
+        child: Padding(
+          padding: const EdgeInsets.all(28),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.lock_outline_rounded, color: _primary, size: 32),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Login Diperlukan',
+                style: TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: _primaryText,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Silakan login terlebih dahulu untuk menambahkan $feature.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 14,
+                  color: _secondaryText,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 28),
+              Row(
+                children: [
+                  Expanded(
+                    child: TextButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      ),
+                      child: const Text(
+                        'Nanti',
+                        style: TextStyle(
+                          color: _secondaryText,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(14),
+                        gradient: const LinearGradient(
+                          colors: [_primary, _primaryDark],
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                        ),
+                        boxShadow: [
+                          BoxShadow(
+                            color: _primary.withOpacity(0.4),
+                            offset: const Offset(0, 4),
+                            blurRadius: 12,
+                          ),
+                        ],
+                      ),
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.pop(ctx);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const LoginScreen(),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.transparent,
+                          shadowColor: Colors.transparent,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                        ),
+                        child: const Text(
+                          'Login',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
-      );
+      ),
+    );
+  }
 
-      if (!_supabase.isLoggedIn) return;
+  Future<void> _submitReview() async {
+    // Cek login dulu
+    if (_supabase.currentUser == null) {
+      _showLoginRequiredDialog('ulasan');
+      return;
     }
 
     if (_submitting) return;
@@ -549,36 +681,6 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
                     ),
                     const SizedBox(height: 16),
 
-                    if (!_supabase.isLoggedIn)
-                      _NeumorphicCard(
-                        child: Column(
-                          children: [
-                            const Icon(
-                              Icons.lock_outline,
-                              size: 50,
-                              color: Colors.grey,
-                            ),
-                            const SizedBox(height: 16),
-                            const Text(
-                              "Silakan login untuk memberikan ulasan",
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            ElevatedButton(
-                              onPressed: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const LoginScreen(),
-                                  ),
-                                );
-                              },
-                              child: const Text("Login"),
-                            ),
-                          ],
-                        ),
-                      )
-                    else
                     _NeumorphicCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,

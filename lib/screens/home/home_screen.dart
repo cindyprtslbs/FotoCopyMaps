@@ -561,6 +561,114 @@ class _HomeTabState extends State<_HomeTab> {
 }
 
 // ─────────────────────────────────────────────────────────
+// HELPER: Cek login & redirect
+// ─────────────────────────────────────────────────────────
+
+/// Tampilkan halaman "perlu login" lalu arahkan ke LoginScreen.
+void _goToLogin(BuildContext context) {
+  Navigator.push(
+    context,
+    MaterialPageRoute(builder: (_) => const LoginScreen()),
+  );
+}
+
+/// Widget tampilan ketika fitur memerlukan login.
+class _LoginRequiredView extends StatelessWidget {
+  final String feature;
+  const _LoginRequiredView({required this.feature});
+
+  @override
+  Widget build(BuildContext context) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(40),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(24),
+              decoration: BoxDecoration(
+                color: const Color(0xFFEFF6FF),
+                shape: BoxShape.circle,
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFD1D9E6).withOpacity(0.5),
+                    offset: const Offset(6, 6),
+                    blurRadius: 12,
+                  ),
+                  const BoxShadow(
+                    color: Colors.white,
+                    offset: Offset(-6, -6),
+                    blurRadius: 12,
+                  ),
+                ],
+              ),
+              child: const Icon(Icons.lock_outline_rounded, size: 48, color: Color(0xFF3B82F6)),
+            ),
+            const SizedBox(height: 28),
+            const Text(
+              'Login Diperlukan',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF1E293B),
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Untuk menggunakan fitur $feature, silakan login terlebih dahulu.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF64748B),
+                height: 1.6,
+              ),
+            ),
+            const SizedBox(height: 32),
+            Container(
+              width: double.infinity,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(16),
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFF3B82F6).withOpacity(0.4),
+                    offset: const Offset(0, 6),
+                    blurRadius: 16,
+                  ),
+                ],
+              ),
+              child: ElevatedButton.icon(
+                onPressed: () => _goToLogin(context),
+                icon: const Icon(Icons.login_rounded, color: Colors.white, size: 20),
+                label: const Text(
+                  'Login Sekarang',
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.transparent,
+                  shadowColor: Colors.transparent,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────
 // FAVORITE TAB
 // ─────────────────────────────────────────────────────────
 class _FavoriteTab extends StatefulWidget {
@@ -592,61 +700,66 @@ class _FavoriteTabState extends State<_FavoriteTab> {
 
   Future<void> _loadFavorites() async {
     if (mounted) setState(() => _isLoading = true);
-      try {
-        final ids = await _favService.getFavoriteIds();
-        if (ids.isEmpty) {
-          if (mounted) setState(() { _favPlaces = []; _isLoading = false; });
-          return;
-        }
-        final allPlaces = await _supabase.getPlaces();
-        final favs = allPlaces.where((p) => ids.contains(p.id)).toList();
-        for (var p in favs) {
-          p.distanceMeters = _location.distanceTo(p);
-        }
-        if (mounted) setState(() => _favPlaces = favs);
-      } catch (_) {}
-      if (mounted) setState(() => _isLoading = false);
-    }
+    try {
+      final ids = await _favService.getFavoriteIds();
+      if (ids.isEmpty) {
+        if (mounted) setState(() { _favPlaces = []; _isLoading = false; });
+        return;
+      }
+      final allPlaces = await _supabase.getPlaces();
+      final favs = allPlaces.where((p) => ids.contains(p.id)).toList();
+      for (var p in favs) {
+        p.distanceMeters = _location.distanceTo(p);
+      }
+      if (mounted) setState(() => _favPlaces = favs);
+    } catch (_) {}
+    if (mounted) setState(() => _isLoading = false);
+  }
 
-    @override
-    Widget build(BuildContext context) {
-      if (!SupabaseService().isLoggedIn) {
-    return Scaffold(
-      backgroundColor: _bgColor,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
+  @override
+  Widget build(BuildContext context) {
+    // Jika belum login, tampilkan halaman login
+    final isLoggedIn = SupabaseService().currentUser != null;
+    if (!isLoggedIn) {
+      return Scaffold(
+        backgroundColor: _bgColor,
+        body: Column(
           children: [
-            const Icon(
-              Icons.favorite_border,
-              size: 80,
-              color: Colors.grey,
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              "Login untuk menambahkan tempat favorit",
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
+            Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
+                ),
+                borderRadius: BorderRadius.only(
+                  bottomLeft: Radius.circular(40),
+                  bottomRight: Radius.circular(40),
+                ),
+              ),
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).padding.top + 20,
+                left: 24,
+                right: 24,
+                bottom: 32,
+              ),
+              child: const Text(
+                'Tersimpan',
+                style: TextStyle(
+                  fontSize: 26,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.white,
+                  letterSpacing: 0.5,
+                ),
               ),
             ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const LoginScreen(),
-                  ),
-                );
-              },
-              child: const Text("Login"),
-            ),
+            const Expanded(child: _LoginRequiredView(feature: 'Favorit')),
           ],
         ),
-      ),
-    );
-  }
+      );
+    }
+
     return Scaffold(
       backgroundColor: _bgColor,
       body: RefreshIndicator(
@@ -859,6 +972,20 @@ class _ProfileTabState extends State<_ProfileTab> {
 
   @override
   Widget build(BuildContext context) {
+    // Jika belum login, tampilkan halaman login
+    final isLoggedIn = SupabaseService().currentUser != null;
+    if (!isLoggedIn) {
+      return Scaffold(
+        backgroundColor: _bgColor,
+        body: Column(
+          children: [
+            SizedBox(height: MediaQuery.of(context).padding.top + 24),
+            const Expanded(child: _LoginRequiredView(feature: 'Profil')),
+          ],
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: _bgColor,
       body: CustomScrollView(
@@ -1005,14 +1132,7 @@ class _ProfileTabState extends State<_ProfileTab> {
                   GestureDetector(
                     onTap: () async {
                       await SupabaseService().signOut();
-                      if (context.mounted) {
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => const LoginScreen(),
-                          ),
-                        );
-                      }
+                      if (mounted) setState(() {}); // rebuild → tampil _LoginRequiredView
                     },
                     child: Container(
                       width: double.infinity,

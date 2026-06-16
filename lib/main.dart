@@ -4,8 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'utils/constants.dart';
 import 'screens/home/home_screen.dart';
-import 'screens/auth/login_screen.dart';
-import 'services/supabase_service.dart';
 // import 'screens/map/map_screen.dart';
 
 void main() async {
@@ -63,8 +61,9 @@ class FotoCopyFinder extends StatelessWidget {
   }
 }
 
-/// Cek apakah user sudah login, lalu arahkan ke screen yang sesuai.
-/// Jika aplikasimu tidak pakai auth, ganti langsung ke HomeScreen().
+/// Selalu arahkan langsung ke HomeScreen.
+/// Login hanya diminta ketika pengguna mencoba fitur yang memerlukannya
+/// (review, favorit, edit profil).
 class AppRouter extends StatelessWidget {
   const AppRouter({super.key});
 
