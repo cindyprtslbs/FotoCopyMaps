@@ -70,19 +70,6 @@ class AppRouter extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final service = SupabaseService();
-
-    // Jika TIDAK pakai auth, hapus StreamBuilder ini dan kembalikan langsung:
-    // return const HomeScreen();
-    return StreamBuilder<AuthState>(
-      stream: service.authStateChanges,
-      builder: (context, snapshot) {
-        final session = Supabase.instance.client.auth.currentSession;
-        if (session != null) {
-          return const HomeScreen();
-        }
-        return const LoginScreen();
-      },
-    );
+    return const HomeScreen();
   }
 }

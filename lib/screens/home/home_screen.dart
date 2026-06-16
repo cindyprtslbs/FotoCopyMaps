@@ -592,24 +592,61 @@ class _FavoriteTabState extends State<_FavoriteTab> {
 
   Future<void> _loadFavorites() async {
     if (mounted) setState(() => _isLoading = true);
-    try {
-      final ids = await _favService.getFavoriteIds();
-      if (ids.isEmpty) {
-        if (mounted) setState(() { _favPlaces = []; _isLoading = false; });
-        return;
-      }
-      final allPlaces = await _supabase.getPlaces();
-      final favs = allPlaces.where((p) => ids.contains(p.id)).toList();
-      for (var p in favs) {
-        p.distanceMeters = _location.distanceTo(p);
-      }
-      if (mounted) setState(() => _favPlaces = favs);
-    } catch (_) {}
-    if (mounted) setState(() => _isLoading = false);
-  }
+      try {
+        final ids = await _favService.getFavoriteIds();
+        if (ids.isEmpty) {
+          if (mounted) setState(() { _favPlaces = []; _isLoading = false; });
+          return;
+        }
+        final allPlaces = await _supabase.getPlaces();
+        final favs = allPlaces.where((p) => ids.contains(p.id)).toList();
+        for (var p in favs) {
+          p.distanceMeters = _location.distanceTo(p);
+        }
+        if (mounted) setState(() => _favPlaces = favs);
+      } catch (_) {}
+      if (mounted) setState(() => _isLoading = false);
+    }
 
-  @override
-  Widget build(BuildContext context) {
+    @override
+    Widget build(BuildContext context) {
+      if (!SupabaseService().isLoggedIn) {
+    return Scaffold(
+      backgroundColor: _bgColor,
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(
+              Icons.favorite_border,
+              size: 80,
+              color: Colors.grey,
+            ),
+            const SizedBox(height: 20),
+            const Text(
+              "Login untuk menambahkan tempat favorit",
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const LoginScreen(),
+                  ),
+                );
+              },
+              child: const Text("Login"),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
     return Scaffold(
       backgroundColor: _bgColor,
       body: RefreshIndicator(

@@ -8,6 +8,7 @@ import '../../services/location_service.dart';
 import '../../services/favorites_service.dart';
 import '../map/map_screen.dart';
 import '../map/route_screen.dart';
+import '../auth/login_screen.dart';
 
 // Tema Warna Neumorphism & Fintech
 const Color _bgColor = Color(0xFFF0F4F8);
@@ -42,11 +43,18 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
 
   // Nama user dari email (bagian sebelum @)
   String get _userName {
+  if (!_supabase.isLoggedIn) {
+      return "Masuk untuk memberi ulasan";
+    }
+
     final user = _supabase.currentUser;
-    final displayName = user?.userMetadata?['display_name'] as String?;
-    if (displayName != null && displayName.isNotEmpty) return displayName;
-    final email = user?.email ?? '';
-    return email.isNotEmpty ? email.split('@').first : 'Pengguna';
+    final displayName = user?.userMetadata?['display_name'];
+
+    if (displayName != null && displayName.isNotEmpty) {
+      return displayName;
+    }
+
+    return user?.email?.split('@').first ?? "Pengguna";
   }
 
   // Inisial untuk avatar
@@ -76,53 +84,29 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
   }
 
   Future<void> _toggleFavorite() async {
-    // Animasi klik memantul
-    setState(() => _favoriteScale = 1.3);
-    Future.delayed(const Duration(milliseconds: 150), () {
-      if (mounted) setState(() => _favoriteScale = 1.0);
+  if (!_supabase.isLoggedIn) {
+    final login = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const LoginScreen(),
+      ),
+    );
+
+    if (!_supabase.isLoggedIn) return;
+  }
+
+  setState(() => _favoriteScale = 1.3);
+
+  Future.delayed(const Duration(milliseconds: 150), () {
+    if (mounted) {
+        setState(() => _favoriteScale = 1.0);
+      }
     });
 
     final newStatus = await _favService.toggleFavorite(widget.place.id);
+
     if (mounted) {
       setState(() => _isFavorite = newStatus);
-      
-      // Feedback haptic visual dengan SnackBar elegan
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.2),
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  newStatus ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                  color: Colors.white,
-                  size: 20,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Text(
-                  newStatus
-                      ? '${widget.place.name} ditambahkan ke favorit'
-                      : '${widget.place.name} dihapus dari favorit',
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                ),
-              ),
-            ],
-          ),
-          backgroundColor: newStatus ? _primary : const Color(0xFF475569),
-          behavior: SnackBarBehavior.floating,
-          elevation: 0,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-          margin: const EdgeInsets.all(24),
-          duration: const Duration(seconds: 2),
-        ),
-      );
     }
   }
 
@@ -144,6 +128,17 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
   }
 
   Future<void> _submitReview() async {
+    if (!_supabase.isLoggedIn) {
+      await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const LoginScreen(),
+        ),
+      );
+
+      if (!_supabase.isLoggedIn) return;
+    }
+
     if (_submitting) return;
     setState(() => _submitting = true);
     try {
@@ -554,6 +549,36 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
                     ),
                     const SizedBox(height: 16),
 
+                    if (!_supabase.isLoggedIn)
+                      _NeumorphicCard(
+                        child: Column(
+                          children: [
+                            const Icon(
+                              Icons.lock_outline,
+                              size: 50,
+                              color: Colors.grey,
+                            ),
+                            const SizedBox(height: 16),
+                            const Text(
+                              "Silakan login untuk memberikan ulasan",
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const LoginScreen(),
+                                  ),
+                                );
+                              },
+                              child: const Text("Login"),
+                            ),
+                          ],
+                        ),
+                      )
+                    else
                     _NeumorphicCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
