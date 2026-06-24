@@ -345,8 +345,12 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
             top: MediaQuery.of(context).padding.top + 16,
             left: 24,
             right: 24,
-            child: _NeumorphicCard(
+            child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+              ),
               child: Row(
                 children: [
                   GestureDetector(
@@ -478,14 +482,15 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
 class _NeumorphicCard extends StatelessWidget {
   final Widget child;
   final EdgeInsetsGeometry? padding;
-  const _NeumorphicCard({required this.child, this.padding});
+  final Color color;
+  const _NeumorphicCard({required this.child, this.padding, this.color = _bgColor});
 
   @override
   Widget build(BuildContext context) {
     return Container(
       padding: padding ?? const EdgeInsets.all(24),
       decoration: BoxDecoration(
-        color: _bgColor,
+        color: color,
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(

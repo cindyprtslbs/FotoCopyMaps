@@ -382,7 +382,7 @@ class _RouteScreenState extends State<RouteScreen> {
                           borderRadius: BorderRadius.circular(14),
                           boxShadow: [
                             BoxShadow(
-                              color: _primary.withOpacity(0.1), // was 0.35
+                              color: _primary.withOpacity(0.05), // was 0.35
                               blurRadius: 12,
                               offset: const Offset(0, 4),
                             )

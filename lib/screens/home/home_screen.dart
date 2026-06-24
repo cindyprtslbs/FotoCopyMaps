@@ -31,6 +31,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   final List<Widget> _screens = const [
     _HomeTab(),
+    _MapsTab(),
     _FavoriteTab(),
     _ProfileTab(),
   ];
@@ -69,6 +70,11 @@ class _BottomNav extends StatelessWidget {
         'label': 'Home'
       },
       {
+        'iconUnselected': Icons.map_outlined,
+        'iconSelected': Icons.map_rounded,
+        'label': 'Maps'
+      },
+      {
         'iconUnselected': Icons.favorite_border_rounded,
         'iconSelected': Icons.favorite_rounded,
         'label': 'Favorite'
@@ -93,18 +99,6 @@ class _BottomNav extends StatelessWidget {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(32),
-                boxShadow: [
-                  BoxShadow(
-                    color: const Color(0xFFD1D9E6).withOpacity(0.6),
-                    offset: const Offset(0, 10),
-                    blurRadius: 24,
-                  ),
-                  const BoxShadow(
-                    color: Colors.white,
-                    offset: Offset(-4, -4),
-                    blurRadius: 16,
-                  ),
-                ],
               ),
             ),
             
@@ -290,7 +284,7 @@ class _HomeTabState extends State<_HomeTab> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFF3B82F6).withOpacity(0.3),
+                      color: const Color(0xFF3B82F6).withOpacity(0.1),
                       offset: const Offset(0, 10),
                       blurRadius: 24,
                     ),
@@ -332,28 +326,36 @@ class _HomeTabState extends State<_HomeTab> {
                             ],
                           ),
                         ),
-                        // Neumorphic Inner Map Button
                         GestureDetector(
-                          onTap: () => Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => MapScreen(places: _places),
-                            ),
-                          ),
+                          onTap: () async {
+                            await SupabaseService().signOut();
+                            if (mounted) {
+                              Navigator.pushAndRemoveUntil(
+                                context,
+                                MaterialPageRoute(builder: (_) => const LoginScreen()),
+                                (route) => false,
+                              );
+                            }
+                          },
                           child: Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
+                              color: Colors.white.withOpacity(0.18),
                               borderRadius: BorderRadius.circular(16),
-                              border: Border.all(
-                                color: Colors.white.withOpacity(0.2),
-                                width: 1,
-                              ),
                             ),
-                            child: const Icon(
-                              Icons.map_rounded,
-                              color: Colors.white,
-                              size: 24,
+                            child: Row(
+                              children: const [
+                                Icon(Icons.logout_rounded, color: Colors.white, size: 18),
+                                SizedBox(width: 8),
+                                Text(
+                                  'Logout',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                         ),
@@ -365,7 +367,7 @@ class _HomeTabState extends State<_HomeTab> {
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(20),
+                        borderRadius: BorderRadius.circular(50),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(0.1),
@@ -523,46 +525,76 @@ class _HomeTabState extends State<_HomeTab> {
           ],
         ),
       ),
-      
-      // Floating Map Button (Neumorphic)
-      floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 150.0), 
-        child: Container(
-          height: 56,
-          width: 56,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            gradient: const LinearGradient(
-              colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-            ),
-            boxShadow: [
-              BoxShadow(
-                color: const Color(0xFF3B82F6).withOpacity(0.4),
-                offset: const Offset(4, 8),
-                blurRadius: 16,
-              ),
-            ],
-          ),
-          child: FloatingActionButton(
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => MapScreen(places: _places)),
-            ),
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            child: const Icon(Icons.map_rounded, color: Colors.white, size: 26),
-          ),
-        ),
-      ),
     );
+  }
+}
+
+class _MapsTab extends StatefulWidget {
+  const _MapsTab();
+
+  @override
+  State<_MapsTab> createState() => _MapsTabState();
+}
+
+class _MapsTabState extends State<_MapsTab> {
+  final _supabase = SupabaseService();
+  final _location = LocationService();
+
+  List<Place> _places = [];
+  bool _isLoading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPlaces();
+  }
+
+  Future<void> _loadPlaces() async {
+    if (mounted) setState(() { _isLoading = true; _error = null; });
+    try {
+      final places = await _supabase.getPlaces();
+      final sorted = _location.sortByDistance(places);
+      if (mounted) setState(() => _places = sorted);
+    } catch (e) {
+      if (mounted) setState(() => _error = e.toString());
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Scaffold(
+        backgroundColor: _bgColor,
+        body: Center(
+          child: CircularProgressIndicator(color: Color(0xFF3B82F6)),
+        ),
+      );
+    }
+
+    if (_error != null) {
+      return Scaffold(
+        backgroundColor: _bgColor,
+        body: _ErrorView(message: _error!, onRetry: _loadPlaces),
+      );
+    }
+
+    if (_places.isEmpty) {
+      return const Scaffold(
+        backgroundColor: _bgColor,
+        body: _EmptyView(),
+      );
+    }
+
+    return MapScreen(places: _places);
   }
 }
 
 // ─────────────────────────────────────────────────────────
 // HELPER: Cek login & redirect
-// ─────────────────────────────────────────────────────────
+// ─────────────────────────────────────────
 
 /// Tampilkan halaman "perlu login" lalu arahkan ke LoginScreen.
 void _goToLogin(BuildContext context) {
@@ -592,7 +624,7 @@ class _LoginRequiredView extends StatelessWidget {
                 shape: BoxShape.circle,
                 boxShadow: [
                   BoxShadow(
-                    color: const Color(0xFFD1D9E6).withOpacity(0.5),
+                    color: const Color(0xFFD1D9E6).withOpacity(0.2),
                     offset: const Offset(6, 6),
                     blurRadius: 12,
                   ),
@@ -1132,7 +1164,13 @@ class _ProfileTabState extends State<_ProfileTab> {
                   GestureDetector(
                     onTap: () async {
                       await SupabaseService().signOut();
-                      if (mounted) setState(() {}); // rebuild → tampil _LoginRequiredView
+                      if (mounted) {
+                        Navigator.pushAndRemoveUntil(
+                          context,
+                          MaterialPageRoute(builder: (_) => const LoginScreen()),
+                          (route) => false,
+                        );
+                      }
                     },
                     child: Container(
                       width: double.infinity,

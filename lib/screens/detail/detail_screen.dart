@@ -16,8 +16,9 @@ const Color _shadowDark = Color(0xFFD1D9E6);
 const Color _shadowLight = Colors.white;
 const Color _primaryText = Color(0xFF1E293B);
 const Color _secondaryText = Color(0xFF64748B);
-const Color _primary = Color(0xFF3B82F6);
-const Color _primaryDark = Color(0xFF1D4ED8);
+const Color _primary = Color(0xFF3B6FE8);
+const Color _primaryDark = Color(0xFF1CB8C8);
+const Color _dividerColor = Color(0xFFE2E8F0);
 
 class DetailScreen extends StatefulWidget {
   final Place place;
@@ -36,12 +37,12 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
   bool _loadingReviews = true;
   bool _isFavorite = false;
   double _favoriteScale = 1.0;
+  bool _openHoursExpanded = false;
 
   double _newRating = 4.0;
   final _commentController = TextEditingController();
   bool _submitting = false;
 
-  // Nama user dari email (bagian sebelum @)
   String get _userName {
     final user = _supabase.currentUser;
     final displayName = user?.userMetadata?['display_name'] as String?;
@@ -50,12 +51,10 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
     return email.isNotEmpty ? email.split('@').first : 'Pengguna';
   }
 
-  // Inisial untuk avatar
   String get _userInitial {
     return _userName.isNotEmpty ? _userName[0].toUpperCase() : '?';
   }
 
-  // Dapatkan label dinamis interaktif untuk rating bintang yang dipilih
   String get _ratingLabel {
     if (_newRating >= 5.0) return 'Luar Biasa!';
     if (_newRating >= 4.0) return 'Sangat Bagus!';
@@ -77,23 +76,17 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
   }
 
   Future<void> _toggleFavorite() async {
-    // Cek login dulu
     if (_supabase.currentUser == null) {
       _showLoginRequiredDialog('favorit');
       return;
     }
-
-    // Animasi klik memantul
     setState(() => _favoriteScale = 1.3);
     Future.delayed(const Duration(milliseconds: 150), () {
       if (mounted) setState(() => _favoriteScale = 1.0);
     });
-
     final newStatus = await _favService.toggleFavorite(widget.place.id);
     if (mounted) {
       setState(() => _isFavorite = newStatus);
-      
-      // Feedback haptic visual dengan SnackBar elegan
       ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -150,7 +143,6 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
     );
   }
 
-  /// Dialog yang muncul saat pengguna belum login dan mencoba fitur terkunci.
   void _showLoginRequiredDialog(String feature) {
     showDialog(
       context: context,
@@ -165,8 +157,8 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
             children: [
               Container(
                 padding: const EdgeInsets.all(16),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
+                decoration: const BoxDecoration(
+                  color: Color(0xFFEFF6FF),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(Icons.lock_outline_rounded, color: _primary, size: 32),
@@ -174,21 +166,13 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
               const SizedBox(height: 20),
               const Text(
                 'Login Diperlukan',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w800,
-                  color: _primaryText,
-                ),
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.w800, color: _primaryText),
               ),
               const SizedBox(height: 12),
               Text(
                 'Silakan login terlebih dahulu untuk menambahkan $feature.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: _secondaryText,
-                  height: 1.5,
-                ),
+                style: const TextStyle(fontSize: 14, color: _secondaryText, height: 1.5),
               ),
               const SizedBox(height: 28),
               Row(
@@ -202,11 +186,7 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
                       ),
                       child: const Text(
                         'Nanti',
-                        style: TextStyle(
-                          color: _secondaryText,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 15,
-                        ),
+                        style: TextStyle(color: _secondaryText, fontWeight: FontWeight.w700, fontSize: 15),
                       ),
                     ),
                   ),
@@ -231,12 +211,7 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
                       child: ElevatedButton(
                         onPressed: () {
                           Navigator.pop(ctx);
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const LoginScreen(),
-                            ),
-                          );
+                          Navigator.push(context, MaterialPageRoute(builder: (_) => const LoginScreen()));
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.transparent,
@@ -244,14 +219,7 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
                           padding: const EdgeInsets.symmetric(vertical: 14),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                         ),
-                        child: const Text(
-                          'Login',
-                          style: TextStyle(
-                            fontSize: 15,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
+                        child: const Text('Login', style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white)),
                       ),
                     ),
                   ),
@@ -265,21 +233,17 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
   }
 
   Future<void> _submitReview() async {
-    // Cek login dulu
     if (_supabase.currentUser == null) {
       _showLoginRequiredDialog('ulasan');
       return;
     }
-
     if (_submitting) return;
     setState(() => _submitting = true);
     try {
       await _supabase.addReview(
         placeId: widget.place.id,
         rating: _newRating,
-        comment: _commentController.text.trim().isEmpty
-            ? null
-            : _commentController.text.trim(),
+        comment: _commentController.text.trim().isEmpty ? null : _commentController.text.trim(),
       );
       _commentController.clear();
       await _loadReviews();
@@ -287,7 +251,7 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Review berhasil dikirim! Terima kasih ulasannya'),
-            backgroundColor: const Color(0xFF22C55E), // Fintech Success Green
+            backgroundColor: const Color(0xFF22C55E),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             margin: const EdgeInsets.all(24),
@@ -299,7 +263,7 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Gagal mengirim review: $e'),
-            backgroundColor: const Color(0xFFEF4444), // Fintech Error Red
+            backgroundColor: const Color(0xFFEF4444),
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
             margin: const EdgeInsets.all(24),
@@ -317,18 +281,12 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
       builder: (ctx) => AlertDialog(
         backgroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: Text(
-          'Hapus Ulasan?',
-          style: TextStyle(fontWeight: FontWeight.w800, color: _primaryText),
-        ),
-        content: Text(
-          'Ulasan Anda akan dihapus secara permanen.',
-          style: TextStyle(color: _secondaryText, fontSize: 14),
-        ),
+        title: const Text('Hapus Ulasan?', style: TextStyle(fontWeight: FontWeight.w800, color: _primaryText)),
+        content: const Text('Ulasan Anda akan dihapus secara permanen.', style: TextStyle(color: _secondaryText, fontSize: 14)),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: Text('Batal', style: TextStyle(color: _secondaryText, fontWeight: FontWeight.w700)),
+            child: const Text('Batal', style: TextStyle(color: _secondaryText, fontWeight: FontWeight.w700)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -336,18 +294,14 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
               backgroundColor: const Color(0xFFFEF2F2),
               foregroundColor: const Color(0xFFEF4444),
               elevation: 0,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
             child: const Text('Ya, Hapus', style: TextStyle(fontWeight: FontWeight.bold)),
           ),
         ],
       ),
     );
-
     if (confirm != true) return;
-
     try {
       await _supabase.deleteReview(review.id);
       await _loadReviews();
@@ -388,16 +342,16 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
     final place = widget.place;
 
     return Scaffold(
-      backgroundColor: _bgColor,
+      backgroundColor: Colors.white,
       body: CustomScrollView(
         physics: const BouncingScrollPhysics(),
         slivers: [
-          // ── Premium App Bar dengan Image Header ──
+          // ── App Bar dengan Hero Image ──
           SliverAppBar(
-            expandedHeight: 300,
+            expandedHeight: 260,
             pinned: true,
             stretch: true,
-            backgroundColor: _bgColor,
+            backgroundColor: Colors.white,
             elevation: 0,
             leading: Padding(
               padding: const EdgeInsets.all(8.0),
@@ -405,16 +359,17 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
                 onTap: () => Navigator.pop(context),
                 child: Container(
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withOpacity(0.9),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white.withOpacity(0.3)),
+                    boxShadow: [
+                      BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 8, offset: const Offset(0, 2)),
+                    ],
                   ),
-                  child: const Icon(Icons.arrow_back_ios_new_rounded, color: Colors.white, size: 20),
+                  child: const Icon(Icons.arrow_back_ios_new_rounded, color: _primaryText, size: 18),
                 ),
               ),
             ),
             actions: [
-              // ── Tombol Favorit Interaktif ──
               AnimatedScale(
                 scale: _favoriteScale,
                 duration: const Duration(milliseconds: 150),
@@ -425,525 +380,595 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
                     child: Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withOpacity(0.9),
                         shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white.withOpacity(0.3)),
+                        boxShadow: [
+                          BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 8, offset: const Offset(0, 2)),
+                        ],
                       ),
                       child: Icon(
                         _isFavorite ? Icons.favorite_rounded : Icons.favorite_border_rounded,
-                        color: _isFavorite ? const Color(0xFFEF4444) : Colors.white,
-                        size: 22,
+                        color: _isFavorite ? const Color(0xFFEF4444) : _primaryText,
+                        size: 20,
                       ),
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 8),
-              // ── Tombol Akses Peta Langsung ──
               Padding(
                 padding: const EdgeInsets.only(right: 16, top: 8, bottom: 8),
                 child: GestureDetector(
                   onTap: () => Navigator.push(
                     context,
-                    MaterialPageRoute(
-                      builder: (_) => MapScreen(places: [place], focusPlace: place),
-                    ),
+                    MaterialPageRoute(builder: (_) => MapScreen(places: [place], focusPlace: place)),
                   ),
                   child: Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: Colors.white.withOpacity(0.2),
+                      color: Colors.white.withOpacity(0.9),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white.withOpacity(0.3)),
+                      boxShadow: [
+                        BoxShadow(color: Colors.black.withOpacity(0.12), blurRadius: 8, offset: const Offset(0, 2)),
+                      ],
                     ),
-                    child: const Icon(Icons.map_rounded, color: Colors.white, size: 20),
+                    child: const Icon(Icons.map_rounded, color: _primaryText, size: 18),
                   ),
                 ),
               ),
             ],
             flexibleSpace: FlexibleSpaceBar(
-              stretchModes: const [
-                StretchMode.zoomBackground,
-                StretchMode.blurBackground,
-              ],
-              background: Stack(
-                fit: StackFit.expand,
-                children: [
-                  place.photoUrl != null
-                      ? CachedNetworkImage(
-                          imageUrl: place.photoUrl!,
-                          fit: BoxFit.cover,
-                          placeholder: (_, __) => Container(color: _shadowDark),
-                          errorWidget: (_, __, ___) => _PlaceholderImage(name: place.name),
-                        )
-                      : _PlaceholderImage(name: place.name),
-                  // Dark Multi-layer Gradient Overlay
-                  const DecoratedBox(
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topCenter,
-                        end: Alignment.bottomCenter,
-                        colors: [
-                          Colors.black45,
-                          Colors.transparent,
-                          Color(0xDD000000), 
-                        ],
-                        stops: [0.0, 0.4, 1.0],
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    bottom: 24,
-                    left: 24,
-                    right: 24,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (place.categoryName != null) ...[
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                            decoration: BoxDecoration(
-                              color: _primary.withOpacity(0.9),
-                              borderRadius: BorderRadius.circular(20),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _primary.withOpacity(0.5),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                )
-                              ],
-                            ),
-                            child: Text(
-                              place.categoryName!.toUpperCase(),
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 1.0,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                        ],
-                        Text(
-                          place.name,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 28,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: -0.5,
-                            shadows: [
-                              Shadow(blurRadius: 10, color: Colors.black54, offset: Offset(0, 4))
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
+              stretchModes: const [StretchMode.zoomBackground, StretchMode.blurBackground],
+              background: place.photoUrl != null
+                  ? CachedNetworkImage(
+                      imageUrl: place.photoUrl!,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => Container(color: const Color(0xFFE2E8F0)),
+                      errorWidget: (_, __, ___) => _PlaceholderImage(name: place.name),
+                    )
+                  : _PlaceholderImage(name: place.name),
             ),
           ),
 
           SliverToBoxAdapter(
-            child: SingleChildScrollView(
-              physics: const NeverScrollableScrollPhysics(),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ── Dynamic Premium Chips Section ──
-                    Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ── Header: Nama, Chip Kategori, Rating, Jarak ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Nama tempat
+                      Text(
+                        place.name,
+                        style: const TextStyle(
+                          fontSize: 22,
+                          fontWeight: FontWeight.w800,
+                          color: _primaryText,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      // Chip kategori + status buka
+                      Row(
+                        children: [
+                          if (place.categoryName != null) ...[
+                            _CategoryChip(label: place.categoryName!),
+                            const SizedBox(width: 8),
+                          ],
+                          _StatusChip(isOpen: true),
+                        ],
+                      ),
+                      const SizedBox(height: 12),
+                      // Rating + Jarak
+                      Row(
+                        children: [
+                          if (place.rating != null) ...[
+                            Row(
+                              children: [
+                                ...List.generate(
+                                  5,
+                                  (i) => Icon(
+                                    i < place.rating!.round() ? Icons.star_rounded : Icons.star_outline_rounded,
+                                    size: 18,
+                                    color: const Color(0xFFF59E0B),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                Text(
+                                  place.rating!.toStringAsFixed(1),
+                                  style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 14, color: _primaryText),
+                                ),
+                                if (_reviews.isNotEmpty) ...[
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    '(${_reviews.length} ulasan)',
+                                    style: const TextStyle(fontSize: 13, color: _secondaryText),
+                                  ),
+                                ],
+                              ],
+                            ),
+                          ],
+                          if (place.distanceMeters != null) ...[
+                            const SizedBox(width: 16),
+                            Row(
+                              children: [
+                                const Icon(Icons.near_me_rounded, size: 16, color: _primary),
+                                const SizedBox(width: 4),
+                                Text(
+                                  place.distanceText,
+                                  style: const TextStyle(fontSize: 13, color: _secondaryText, fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+
+                const SizedBox(height: 20),
+                const Divider(color: _dividerColor, thickness: 1, height: 1),
+
+                // ── Informasi Tempat ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  child: Text(
+                    'INFORMASI TEMPAT',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: _secondaryText,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+
+                // Alamat
+                if (place.address != null && place.address!.isNotEmpty) ...[
+                  _InfoTile(
+                    icon: Icons.location_on_outlined,
+                    iconColor: _primary,
+                    child: Text(
+                      place.address!,
+                      style: const TextStyle(fontSize: 14, color: _primaryText, fontWeight: FontWeight.w600, height: 1.4),
+                    ),
+                  ),
+                  const Divider(indent: 60, endIndent: 20, color: _dividerColor, thickness: 1, height: 1),
+                ],
+
+                // Jam operasional dengan expand
+                if (place.openHours != null && place.openHours!.isNotEmpty) ...[
+                  GestureDetector(
+                    onTap: () => setState(() => _openHoursExpanded = !_openHoursExpanded),
+                    behavior: HitTestBehavior.opaque,
+                    child: _InfoTile(
+                      icon: Icons.access_time_rounded,
+                      iconColor: _primary,
+                      trailing: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: _bgColor,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(color: _shadowDark.withOpacity(0.4), offset: const Offset(3, 3), blurRadius: 6),
+                            const BoxShadow(color: _shadowLight, offset: Offset(-3, -3), blurRadius: 6),
+                          ],
+                        ),
+                        child: Icon(
+                          _openHoursExpanded ? Icons.expand_less_rounded : Icons.expand_more_rounded,
+                          size: 20,
+                          color: _secondaryText,
+                        ),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            place.openHours!,
+                            style: const TextStyle(fontSize: 14, color: _primaryText, fontWeight: FontWeight.w600),
+                          ),
+                          if (_openHoursExpanded) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              'Informasi jam operasional dapat berubah\npada hari libur nasional.',
+                              style: TextStyle(fontSize: 12, color: _secondaryText, height: 1.5),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ),
+                  const Divider(indent: 60, endIndent: 20, color: _dividerColor, thickness: 1, height: 1),
+                ],
+
+                // Deskripsi / about
+                if (place.description != null && place.description!.isNotEmpty) ...[
+                  _InfoTile(
+                    icon: Icons.info_outline_rounded,
+                    iconColor: _primary,
+                    child: Text(
+                      place.description!,
+                      style: const TextStyle(fontSize: 14, color: _primaryText, fontWeight: FontWeight.w500, height: 1.5),
+                    ),
+                  ),
+                ],
+
+                const SizedBox(height: 20),
+                const Divider(color: _dividerColor, thickness: 8, height: 8),
+
+                // ── Layanan Tersedia ──
+                const Padding(
+                  padding: EdgeInsets.fromLTRB(20, 20, 20, 16),
+                  child: Text(
+                    'LAYANAN TERSEDIA',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w800,
+                      color: _secondaryText,
+                      letterSpacing: 1.2,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  child: Wrap(
+                    spacing: 10,
+                    runSpacing: 10,
+                    children: _buildServiceChips(place),
+                  ),
+                ),
+
+                const Divider(color: _dividerColor, thickness: 8, height: 8),
+
+                // ── Ulasan ──
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      const Text(
+                        'ULASAN PENGGUNA',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          color: _secondaryText,
+                          letterSpacing: 1.2,
+                        ),
+                      ),
+                      if (!_loadingReviews)
+                        Text(
+                          _reviews.isEmpty ? 'Belum ada ulasan' : '${_reviews.length} ulasan',
+                          style: const TextStyle(fontSize: 12, color: _secondaryText, fontWeight: FontWeight.w600),
+                        ),
+                    ],
+                  ),
+                ),
+
+                // Form Ulasan
+                const SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: _NeumorphicCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        if (place.rating != null) ...[
-                          _StatChip(
-                            icon: Icons.star_rounded,
-                            label: place.rating!.toStringAsFixed(1),
-                            iconColor: const Color(0xFFF59E0B),
-                            bgColor: const Color(0xFFFEF3C7),
-                            textColor: const Color(0xFFB45309),
+                        Row(
+                          children: [
+                            Container(
+                              width: 44,
+                              height: 44,
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(colors: [_primary, _primaryDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                                shape: BoxShape.circle,
+                                boxShadow: [BoxShadow(color: _primary.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))],
+                              ),
+                              child: Center(
+                                child: Text(_userInitial, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 18)),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(_userName, style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: _primaryText)),
+                                  const SizedBox(height: 2),
+                                  const Text('Tulis ulasan Anda', style: TextStyle(color: _secondaryText, fontSize: 12)),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            RatingBar.builder(
+                              initialRating: _newRating,
+                              minRating: 1,
+                              direction: Axis.horizontal,
+                              allowHalfRating: false,
+                              itemCount: 5,
+                              itemPadding: const EdgeInsets.only(right: 4),
+                              itemSize: 34,
+                              itemBuilder: (_, __) => const Icon(Icons.star_rounded, color: Color(0xFFF59E0B)),
+                              onRatingUpdate: (rating) => setState(() => _newRating = rating),
+                            ),
+                            AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFFEF3C7),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              child: Text(
+                                _ratingLabel,
+                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFFD97706)),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        TextField(
+                          controller: _commentController,
+                          maxLines: 3,
+                          style: const TextStyle(fontSize: 14, color: _primaryText),
+                          decoration: InputDecoration(
+                            hintText: 'Bagikan pengalaman Anda di sini...',
+                            hintStyle: TextStyle(color: _secondaryText.withOpacity(0.6), fontSize: 13),
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                            filled: true,
+                            fillColor: const Color(0xFFF8FAFC),
+                            border: OutlineInputBorder(borderRadius: BorderRadius.circular(14), borderSide: BorderSide.none),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(color: _dividerColor, width: 1),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(14),
+                              borderSide: const BorderSide(color: _primary, width: 1.5),
+                            ),
                           ),
-                          const SizedBox(width: 12),
-                        ],
-                        if (place.distanceMeters != null) ...[
-                          _StatChip(
-                            icon: Icons.near_me_rounded,
-                            label: place.distanceText,
-                            iconColor: _primary,
-                            bgColor: const Color(0xFFDBEAFE),
-                            textColor: _primaryDark,
+                        ),
+                        const SizedBox(height: 14),
+                        Container(
+                          width: double.infinity,
+                          height: 48,
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(colors: [_primary, _primaryDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                            borderRadius: BorderRadius.circular(14),
+                            boxShadow: [BoxShadow(color: _primary.withOpacity(0.35), offset: const Offset(0, 4), blurRadius: 12)],
                           ),
-                        ],
+                          child: ElevatedButton(
+                            onPressed: _submitting ? null : _submitReview,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.transparent,
+                              shadowColor: Colors.transparent,
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                            ),
+                            child: _submitting
+                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2.5, color: Colors.white))
+                                : const Text('Publikasikan Ulasan', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                          ),
+                        ),
                       ],
                     ),
+                  ),
+                ),
 
-                    const SizedBox(height: 32),
+                const SizedBox(height: 20),
 
-                    // ── Deskripsi / Tentang Tempat Card (Neumorphic) ──
-                    if (place.description != null && place.description!.isNotEmpty) ...[
-                      const _SectionHeader(title: 'Tentang Tempat'),
-                      const SizedBox(height: 16),
-                      _NeumorphicCard(
-                        child: Text(
-                          place.description!,
-                          style: TextStyle(
-                            fontSize: 14,
-                            height: 1.6,
-                            color: _primaryText,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 32),
-                    ],
-
-                    // ── Detail Informasi Operasional Card (Neumorphic) ──
-                    const _SectionHeader(title: 'Detail Informasi'),
-                    const SizedBox(height: 16),
-                    _NeumorphicCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          if (place.address != null && place.address!.isNotEmpty) ...[
-                            _InfoRow(
-                              icon: Icons.location_on_outlined,
-                              title: 'Alamat Lokasi',
-                              label: place.address!,
-                            ),
-                          ],
-                          if (place.openHours != null && place.openHours!.isNotEmpty) ...[
-                            if (place.address != null && place.address!.isNotEmpty)
-                              const _HDivider(),
-                            _InfoRow(
-                              icon: Icons.access_time_rounded,
-                              title: 'Jam Operasional',
-                              label: place.openHours!,
-                            ),
-                          ],
-                          if ((place.address == null || place.address!.isEmpty) &&
-                              (place.openHours == null || place.openHours!.isEmpty))
-                            Center(
-                              child: Padding(
-                                padding: const EdgeInsets.symmetric(vertical: 12.0),
-                                child: Text(
-                                  'Informasi operasional terperinci belum tersedia.',
-                                  style: TextStyle(color: _secondaryText, fontSize: 13),
-                                ),
-                              ),
-                            )
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 32),
-
-                    // ── Premium Route Button dengan Ripple Gradient Effect ──
-                    Container(
-                      width: double.infinity,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [_primary, _primaryDark],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: [
-                          BoxShadow(
-                            color: _primary.withOpacity(0.4),
-                            blurRadius: 16,
-                            offset: const Offset(0, 8),
-                          )
-                        ],
-                      ),
-                      child: ElevatedButton.icon(
-                        onPressed: _openRoute,
-                        icon: const Icon(Icons.directions_rounded, size: 22, color: Colors.white),
-                        label: const Text(
-                          'Buka Rute',
-                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.2, color: Colors.white),
-                        ),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.transparent,
-                          shadowColor: Colors.transparent,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        ),
-                      ),
-                    ),
-
-                    const SizedBox(height: 40),
-
-                    // ── Formulir Penulisan Ulasan Interaktif (Neumorphic) ──
-                    const _SectionHeader(
-                      title: 'Beri Ulasan Anda',
-                      subtitle: 'Bagikan pengalaman terbaikmu',
-                    ),
-                    const SizedBox(height: 16),
-
-                    _NeumorphicCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
+                // List Ulasan
+                if (_loadingReviews)
+                  const Center(child: Padding(padding: EdgeInsets.all(32), child: CircularProgressIndicator(color: _primary)))
+                else if (_reviews.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: _NeumorphicCard(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 24),
+                        child: Center(
+                          child: Column(
                             children: [
                               Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  gradient: const LinearGradient(
-                                    colors: [_primary, _primaryDark],
-                                    begin: Alignment.topLeft,
-                                    end: Alignment.bottomRight,
-                                  ),
-                                  shape: BoxShape.circle,
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: _primary.withOpacity(0.3),
-                                      blurRadius: 8,
-                                      offset: const Offset(0, 4),
-                                    )
-                                  ],
-                                ),
-                                child: Center(
-                                  child: Text(
-                                    _userInitial,
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 18,
-                                    ),
-                                  ),
-                                ),
+                                padding: const EdgeInsets.all(14),
+                                decoration: const BoxDecoration(color: Color(0xFFF1F5F9), shape: BoxShape.circle),
+                                child: Icon(Icons.rate_review_outlined, size: 36, color: _secondaryText),
                               ),
-                              const SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _userName,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w800,
-                                        fontSize: 16,
-                                        color: _primaryText,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      'Penulis Ulasan Resmi',
-                                      style: TextStyle(
-                                        color: _secondaryText,
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
+                              const SizedBox(height: 12),
+                              const Text('Belum ada ulasan', style: TextStyle(color: _primaryText, fontSize: 15, fontWeight: FontWeight.w700)),
+                              const SizedBox(height: 4),
+                              const Text('Jadilah yang pertama mengulas!', style: TextStyle(color: _secondaryText, fontSize: 13)),
                             ],
                           ),
-                          const SizedBox(height: 24),
-                          
-                          // Sesi Interaktif Penentuan Skor Bintang
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                'Sentuh untuk Menilai:',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w700,
-                                  color: _primaryText,
-                                ),
-                              ),
-                              AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFEF3C7),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Text(
-                                  _ratingLabel,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w800,
-                                    color: Color(0xFFD97706),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 12),
-                          RatingBar.builder(
-                            initialRating: _newRating,
-                            minRating: 1,
-                            direction: Axis.horizontal,
-                            allowHalfRating: false,
-                            itemCount: 5,
-                            itemPadding: const EdgeInsets.only(right: 8),
-                            itemSize: 40,
-                            itemBuilder: (_, __) => const Icon(
-                              Icons.star_rounded,
-                              color: Color(0xFFF59E0B),
-                            ),
-                            onRatingUpdate: (rating) {
-                              setState(() => _newRating = rating);
-                            },
-                          ),
-                          const SizedBox(height: 24),
-                          
-                          TextField(
-                            controller: _commentController,
-                            maxLines: 3,
-                            style: TextStyle(fontSize: 15, color: _primaryText),
-                            decoration: InputDecoration(
-                              hintText: 'Ketik ulasan atau pengalaman Anda tentang tempat ini di sini...',
-                              hintStyle: TextStyle(color: _secondaryText.withOpacity(0.6), fontSize: 14),
-                              contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-                              filled: true,
-                              fillColor: const Color(0xFFF8FAFC),
-                              border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: BorderSide.none,
-                              ),
-                              enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(color: Color(0xFFE2E8F0), width: 1),
-                              ),
-                              focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(16),
-                                borderSide: const BorderSide(color: _primary, width: 1.5),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          
-                          Container(
-                            width: double.infinity,
-                            height: 52,
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [_primary, _primaryDark],
-                                begin: Alignment.topLeft,
-                                end: Alignment.bottomRight,
-                              ),
-                              borderRadius: BorderRadius.circular(16),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: _primary.withOpacity(0.4),
-                                  offset: const Offset(0, 4),
-                                  blurRadius: 12,
-                                )
-                              ],
-                            ),
-                            child: ElevatedButton(
-                              onPressed: _submitting ? null : _submitReview,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.transparent,
-                                shadowColor: Colors.transparent,
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                              ),
-                              child: _submitting
-                                  ? const SizedBox(
-                                      width: 22,
-                                      height: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        color: Colors.white,
-                                      ),
-                                    )
-                                  : const Text(
-                                      'Publikasikan Ulasan',
-                                      style: TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Colors.white),
-                                    ),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ),
-
-                    const SizedBox(height: 40),
-
-                    // ── Bagian Daftar Ulasan Komunitas Kampus ──
-                    _SectionHeader(
-                      title: 'Ulasan Pengguna',
-                      subtitle: _reviews.isEmpty ? 'Belum ada ulasan' : '${_reviews.length} ulasan kontributor',
+                  )
+                else
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: ListView.separated(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      itemCount: _reviews.length,
+                      separatorBuilder: (_, __) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final r = _reviews[index];
+                        return _ReviewCard(review: r, onDelete: () => _deleteReview(r));
+                      },
                     ),
-                    const SizedBox(height: 16),
+                  ),
 
-                    if (_loadingReviews)
-                      const Center(
-                        child: Padding(
-                          padding: EdgeInsets.all(32),
-                          child: CircularProgressIndicator(color: _primary),
-                        ),
-                      )
-                    else if (_reviews.isEmpty)
-                      _NeumorphicCard(
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 32),
-                          child: Center(
-                            child: Column(
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFF1F5F9),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Icon(Icons.rate_review_outlined, size: 40, color: _secondaryText),
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Belum ada ulasan',
-                                  style: TextStyle(color: _primaryText, fontSize: 16, fontWeight: FontWeight.w700),
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  'Jadilah orang pertama yang mengulas tempat ini!',
-                                  style: TextStyle(color: _secondaryText, fontSize: 13),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      )
-                    else
-                      ListView.builder(
-                        padding: EdgeInsets.zero,
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: _reviews.length,
-                        itemBuilder: (context, index) {
-                          final r = _reviews[index];
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 16),
-                            child: _ReviewCard(
-                              review: r,
-                              onDelete: () => _deleteReview(r),
-                            ),
-                          );
-                        },
-                      ),
-
-                    const SizedBox(height: 48),
-                  ],
-                ),
-              ),
+                const SizedBox(height: 100),
+              ],
             ),
           ),
+        ],
+      ),
+
+      // ── Bottom Bar: Tombol Mulai Rute ──
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 28),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(color: Colors.black.withOpacity(0.08), blurRadius: 16, offset: const Offset(0, -4)),
+          ],
+        ),
+        child: Container(
+          height: 54,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [_primary, _primaryDark], begin: Alignment.topLeft, end: Alignment.bottomRight),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [BoxShadow(color: _primary.withOpacity(0.4), blurRadius: 16, offset: const Offset(0, 8))],
+          ),
+          child: ElevatedButton.icon(
+            onPressed: _openRoute,
+            icon: const Icon(Icons.navigation_rounded, size: 20, color: Colors.white),
+            label: const Text('Mulai Rute', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, letterSpacing: 0.2, color: Colors.white)),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.transparent,
+              shadowColor: Colors.transparent,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildServiceChips(Place place) {
+    // Buat chips layanan dari deskripsi atau kategori
+    final services = <Map<String, dynamic>>[];
+
+    if (place.categoryName?.toLowerCase().contains('fotocopy') == true ||
+        place.categoryName?.toLowerCase().contains('percetakan') == true) {
+      services.addAll([
+        {'icon': Icons.content_copy_rounded, 'label': 'Fotocopy'},
+        {'icon': Icons.print_rounded, 'label': 'Print Dokumen'},
+        {'icon': Icons.layers_rounded, 'label': 'Laminating'},
+        {'icon': Icons.menu_book_rounded, 'label': 'Jilid Buku'},
+        {'icon': Icons.scanner_rounded, 'label': 'Scan'},
+        {'icon': Icons.badge_rounded, 'label': 'Foto KTP/Pas Foto'},
+      ]);
+    } else {
+      // Tampilkan chip generik berdasarkan deskripsi
+      if (place.description != null) {
+        services.add({'icon': Icons.storefront_rounded, 'label': place.categoryName ?? 'Layanan'});
+      }
+    }
+
+    if (services.isEmpty) return [];
+
+    return services.map((s) => _ServiceChip(icon: s['icon'] as IconData, label: s['label'] as String)).toList();
+  }
+}
+
+// ─────────────────────────────────────────────────────────
+// COMPONENT WIDGETS
+// ─────────────────────────────────────────────────────────
+
+class _CategoryChip extends StatelessWidget {
+  final String label;
+  const _CategoryChip({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: const Color(0xFFEEF4FF),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: _primary.withOpacity(0.2)),
+      ),
+      child: Text(
+        label,
+        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _primary),
+      ),
+    );
+  }
+}
+
+class _StatusChip extends StatelessWidget {
+  final bool isOpen;
+  const _StatusChip({required this.isOpen});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
+      decoration: BoxDecoration(
+        color: isOpen ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: isOpen ? const Color(0xFF22C55E).withOpacity(0.3) : const Color(0xFFEF4444).withOpacity(0.3)),
+      ),
+    );
+  }
+}
+
+class _ServiceChip extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  const _ServiceChip({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: _dividerColor),
+        boxShadow: [
+          BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 6, offset: const Offset(0, 2)),
+        ],
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: _primary),
+          const SizedBox(width: 8),
+          Text(label, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: _primaryText)),
         ],
       ),
     );
   }
 }
 
-// ─────────────────────────────────────────────────────────
-// REUSABLE NEUMORPHIC DECORATIVE COMPONENT WIDGETS
-// ─────────────────────────────────────────────────────────
+class _InfoTile extends StatelessWidget {
+  final IconData icon;
+  final Color iconColor;
+  final Widget child;
+  final Widget? trailing;
+  const _InfoTile({required this.icon, required this.iconColor, required this.child, this.trailing});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 22, color: iconColor),
+          const SizedBox(width: 16),
+          Expanded(child: child),
+          if (trailing != null) ...[
+            const SizedBox(width: 12),
+            trailing!,
+          ],
+        ],
+      ),
+    );
+  }
+}
 
 class _NeumorphicCard extends StatelessWidget {
   final Widget child;
@@ -953,21 +978,13 @@ class _NeumorphicCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(24),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: _bgColor,
-        borderRadius: BorderRadius.circular(24),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
-          BoxShadow(
-            color: _shadowDark.withOpacity(0.5),
-            offset: const Offset(8, 8),
-            blurRadius: 16,
-          ),
-          const BoxShadow(
-            color: _shadowLight,
-            offset: Offset(-8, -8),
-            blurRadius: 16,
-          ),
+          BoxShadow(color: _shadowDark.withOpacity(0.5), offset: const Offset(6, 6), blurRadius: 14),
+          const BoxShadow(color: _shadowLight, offset: Offset(-6, -6), blurRadius: 14),
         ],
       ),
       child: child,
@@ -983,11 +1000,7 @@ class _PlaceholderImage extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [_primary, _primaryDark],
-        ),
+        gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [_primary, _primaryDark]),
       ),
       child: Center(
         child: Text(
@@ -995,142 +1008,6 @@ class _PlaceholderImage extends StatelessWidget {
           style: const TextStyle(fontSize: 84, fontWeight: FontWeight.w900, color: Colors.white),
         ),
       ),
-    );
-  }
-}
-
-class _StatChip extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final Color iconColor, bgColor, textColor;
-
-  const _StatChip({
-    required this.icon,
-    required this.label,
-    required this.iconColor,
-    required this.bgColor,
-    required this.textColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: bgColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: bgColor.withOpacity(0.4),
-            offset: const Offset(0, 4),
-            blurRadius: 8,
-          ),
-        ],
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 18, color: iconColor),
-          const SizedBox(width: 8),
-          Text(
-            label,
-            style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: textColor),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String label;
-  const _InfoRow({
-    required this.icon,
-    required this.title,
-    required this.label,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: const Color(0xFFE0E7FF),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Icon(icon, size: 22, color: _primary),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title.toUpperCase(),
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w800,
-                  color: _secondaryText,
-                  letterSpacing: 1.0,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                label,
-                style: TextStyle(
-                  fontSize: 15,
-                  color: _primaryText,
-                  height: 1.5,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _HDivider extends StatelessWidget {
-  const _HDivider();
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 16),
-      child: Divider(color: _shadowDark.withOpacity(0.5), height: 1, thickness: 1),
-    );
-  }
-}
-
-class _SectionHeader extends StatelessWidget {
-  final String title;
-  final String? subtitle;
-  const _SectionHeader({required this.title, this.subtitle});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Text(
-          title,
-          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w800, color: _primaryText, letterSpacing: -0.2),
-        ),
-        if (subtitle != null)
-          Text(
-            subtitle!,
-            style: TextStyle(fontSize: 12, color: _secondaryText, fontWeight: FontWeight.w600),
-          ),
-      ],
     );
   }
 }
@@ -1150,36 +1027,23 @@ class _ReviewCard extends StatelessWidget {
 
     final currentUserId = SupabaseService().currentUser?.id;
     final isOwn = review.userId != null && review.userId == currentUserId;
-    final displayName = reviewName;
-    final initial = displayName.isNotEmpty ? displayName[0].toUpperCase() : '?';
+    final initial = reviewName.isNotEmpty ? reviewName[0].toUpperCase() : '?';
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: _bgColor,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: _shadowDark.withOpacity(0.4),
-            offset: const Offset(6, 6),
-            blurRadius: 12,
-          ),
-          const BoxShadow(
-            color: _shadowLight,
-            offset: Offset(-6, -6),
-            blurRadius: 12,
-          ),
-        ],
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: _dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              // Premium Profile Avatar Wrapper
               Container(
-                width: 44,
-                height: 44,
+                width: 40,
+                height: 40,
                 decoration: BoxDecoration(
                   gradient: isOwn
                       ? const LinearGradient(colors: [_primary, _primaryDark])
@@ -1187,24 +1051,17 @@ class _ReviewCard extends StatelessWidget {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: isOwn ? _primary.withOpacity(0.3) : Colors.black.withOpacity(0.1),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
+                      color: isOwn ? _primary.withOpacity(0.3) : Colors.black.withOpacity(0.08),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
                     )
                   ],
                 ),
                 child: Center(
-                  child: Text(
-                    initial,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      fontSize: 18,
-                    ),
-                  ),
+                  child: Text(initial, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 16)),
                 ),
               ),
-              const SizedBox(width: 16),
+              const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -1213,90 +1070,63 @@ class _ReviewCard extends StatelessWidget {
                       children: [
                         Expanded(
                           child: Text(
-                            displayName,
-                            style: TextStyle(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w800,
-                              color: _primaryText,
-                            ),
+                            reviewName,
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w800, color: _primaryText),
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         if (isOwn) ...[
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFFE0E7FF),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: const Text(
-                              'Anda',
-                              style: TextStyle(
-                                fontSize: 10,
-                                color: _primary,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(color: const Color(0xFFEEF4FF), borderRadius: BorderRadius.circular(8)),
+                            child: const Text('Anda', style: TextStyle(fontSize: 10, color: _primary, fontWeight: FontWeight.w800)),
                           ),
                         ],
                       ],
                     ),
                     const SizedBox(height: 2),
-                    if (review.createdAt != null)
-                      Text(
-                        _formatDate(review.createdAt!),
-                        style: TextStyle(fontSize: 12, color: _secondaryText, fontWeight: FontWeight.w500),
-                      ),
+                    Row(
+                      children: [
+                        ...List.generate(
+                          5,
+                          (i) => Icon(
+                            i < review.rating.round() ? Icons.star_rounded : Icons.star_outline_rounded,
+                            size: 14,
+                            color: const Color(0xFFF59E0B),
+                          ),
+                        ),
+                        if (review.createdAt != null) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            _formatDate(review.createdAt!),
+                            style: const TextStyle(fontSize: 11, color: _secondaryText),
+                          ),
+                        ],
+                      ],
+                    ),
                   ],
                 ),
               ),
-              const SizedBox(width: 8),
-              // Compact Rating Indicator Stars
-              Row(
-                children: List.generate(
-                  5,
-                  (i) => Icon(
-                    i < review.rating.round() ? Icons.star_rounded : Icons.star_outline_rounded,
-                    size: 16,
-                    color: const Color(0xFFF59E0B),
-                  ),
-                ),
-              ),
               if (isOwn && onDelete != null) ...[
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 GestureDetector(
                   onTap: onDelete,
                   child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEF2F2),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: const Icon(
-                      Icons.delete_outline_rounded,
-                      size: 18,
-                      color: Color(0xFFEF4444),
-                    ),
+                    padding: const EdgeInsets.all(7),
+                    decoration: BoxDecoration(color: const Color(0xFFFEF2F2), borderRadius: BorderRadius.circular(10)),
+                    child: const Icon(Icons.delete_outline_rounded, size: 16, color: Color(0xFFEF4444)),
                   ),
                 ),
               ],
             ],
           ),
           if (review.comment != null && review.comment!.isNotEmpty) ...[
-            const SizedBox(height: 16),
-            Padding(
-              padding: const EdgeInsets.only(left: 4),
-              child: Text(
-                review.comment!,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: _primaryText.withOpacity(0.8),
-                  height: 1.6,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
+            const SizedBox(height: 10),
+            Text(
+              review.comment!,
+              style: TextStyle(fontSize: 13, color: _primaryText.withOpacity(0.8), height: 1.5, fontWeight: FontWeight.w500),
             ),
           ],
         ],
@@ -1305,10 +1135,7 @@ class _ReviewCard extends StatelessWidget {
   }
 
   String _formatDate(DateTime dt) {
-    const months = [
-      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
-      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
-    ];
+    const months = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];
     return '${dt.day} ${months[dt.month - 1]} ${dt.year}';
   }
 }
