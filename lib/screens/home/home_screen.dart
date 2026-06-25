@@ -347,14 +347,6 @@ class _HomeTabState extends State<_HomeTab> {
                               children: const [
                                 Icon(Icons.logout_rounded, color: Colors.white, size: 18),
                                 SizedBox(width: 8),
-                                Text(
-                                  'Logout',
-                                  style: TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
                               ],
                             ),
                           ),

@@ -458,7 +458,6 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
                             _CategoryChip(label: place.categoryName!),
                             const SizedBox(width: 8),
                           ],
-                          _StatusChip(isOpen: true),
                         ],
                       ),
                       const SizedBox(height: 12),
@@ -892,23 +891,6 @@ class _CategoryChip extends StatelessWidget {
       child: Text(
         label,
         style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: _primary),
-      ),
-    );
-  }
-}
-
-class _StatusChip extends StatelessWidget {
-  final bool isOpen;
-  const _StatusChip({required this.isOpen});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
-      decoration: BoxDecoration(
-        color: isOpen ? const Color(0xFFDCFCE7) : const Color(0xFFFEE2E2),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: isOpen ? const Color(0xFF22C55E).withOpacity(0.3) : const Color(0xFFEF4444).withOpacity(0.3)),
       ),
     );
   }
