@@ -28,27 +28,35 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   int _currentIndex = 0;
+  late final List<Widget> _screens;
 
-  final List<Widget> _screens = const [
-    _HomeTab(),
-    _MapsTab(),
-    _FavoriteTab(),
-    _ProfileTab(),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    _screens = [
+      const _HomeTab(),
+      _MapsTab(onBack: () => setState(() => _currentIndex = 0)),
+      const _FavoriteTab(),
+      const _ProfileTab(),
+    ];
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      extendBody: true, // Required for the floating bottom nav effect
+      extendBody: true,
       backgroundColor: _bgColor,
       body: IndexedStack(
         index: _currentIndex,
         children: _screens,
       ),
-      bottomNavigationBar: _BottomNav(
-        currentIndex: _currentIndex,
-        onTap: (i) => setState(() => _currentIndex = i),
-      ),
+      // Sembunyikan navbar saat berada di tab Maps (index 1)
+      bottomNavigationBar: _currentIndex == 1
+          ? null
+          : _BottomNav(
+              currentIndex: _currentIndex,
+              onTap: (i) => setState(() => _currentIndex = i),
+            ),
     );
   }
 }
@@ -522,7 +530,8 @@ class _HomeTabState extends State<_HomeTab> {
 }
 
 class _MapsTab extends StatefulWidget {
-  const _MapsTab();
+  final VoidCallback? onBack;
+  const _MapsTab({this.onBack});
 
   @override
   State<_MapsTab> createState() => _MapsTabState();
@@ -580,7 +589,7 @@ class _MapsTabState extends State<_MapsTab> {
       );
     }
 
-    return MapScreen(places: _places);
+    return MapScreen(places: _places, onBackPressed: widget.onBack);
   }
 }
 

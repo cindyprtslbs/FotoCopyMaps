@@ -89,11 +89,13 @@ class _MarkerStyle {
 class MapScreen extends StatefulWidget {
   final List<Place> places;
   final Place? focusPlace;
+  final VoidCallback? onBackPressed;
 
   const MapScreen({
     super.key,
     required this.places,
     this.focusPlace,
+    this.onBackPressed,
   });
 
   @override
@@ -354,7 +356,13 @@ class _MapScreenState extends State<MapScreen> with SingleTickerProviderStateMix
               child: Row(
                 children: [
                   GestureDetector(
-                    onTap: () => Navigator.pop(context),
+                    onTap: () {
+                      if (widget.onBackPressed != null) {
+                        widget.onBackPressed!();
+                      } else {
+                        Navigator.pop(context);
+                      }
+                    },
                     child: Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
