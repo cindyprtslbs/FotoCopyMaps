@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_rating_bar/flutter_rating_bar.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/place_model.dart';
 import '../../models/review_model.dart';
 import '../../services/supabase_service.dart';
@@ -139,6 +140,31 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
       context,
       MaterialPageRoute(
         builder: (_) => RouteScreen(destination: widget.place),
+      ),
+    );
+  }
+
+  Future<void> _callPhone(String phoneNumber) async {
+    final cleaned = phoneNumber.trim();
+    final uri = Uri(scheme: 'tel', path: cleaned);
+    try {
+      final launched = await launchUrl(uri);
+      if (!launched && mounted) {
+        _showCallFailedSnackbar();
+      }
+    } catch (_) {
+      if (mounted) _showCallFailedSnackbar();
+    }
+  }
+
+  void _showCallFailedSnackbar() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: const Text('Tidak dapat membuka aplikasi telepon.'),
+        backgroundColor: const Color(0xFFEF4444),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        margin: const EdgeInsets.all(24),
       ),
     );
   }
@@ -534,6 +560,36 @@ class _DetailScreenState extends State<DetailScreen> with SingleTickerProviderSt
                     child: Text(
                       place.address!,
                       style: const TextStyle(fontSize: 14, color: _primaryText, fontWeight: FontWeight.w600, height: 1.4),
+                    ),
+                  ),
+                  const Divider(indent: 60, endIndent: 20, color: _dividerColor, thickness: 1, height: 1),
+                ],
+
+                // Telepon
+                if (place.telephone != null && place.telephone!.isNotEmpty) ...[
+                  GestureDetector(
+                    onTap: () => _callPhone(place.telephone!),
+                    behavior: HitTestBehavior.opaque,
+                    child: _InfoTile(
+                      icon: Icons.phone_outlined,
+                      iconColor: _primary,
+                      trailing: Container(
+                        width: 36,
+                        height: 36,
+                        decoration: BoxDecoration(
+                          color: _bgColor,
+                          borderRadius: BorderRadius.circular(10),
+                          boxShadow: [
+                            BoxShadow(color: _shadowDark.withOpacity(0.4), offset: const Offset(3, 3), blurRadius: 6),
+                            const BoxShadow(color: _shadowLight, offset: Offset(-3, -3), blurRadius: 6),
+                          ],
+                        ),
+                        child: const Icon(Icons.call_rounded, size: 18, color: _primary),
+                      ),
+                      child: Text(
+                        place.telephone!,
+                        style: const TextStyle(fontSize: 14, color: _primaryText, fontWeight: FontWeight.w600),
+                      ),
                     ),
                   ),
                   const Divider(indent: 60, endIndent: 20, color: _dividerColor, thickness: 1, height: 1),

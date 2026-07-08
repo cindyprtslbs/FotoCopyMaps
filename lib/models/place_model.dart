@@ -10,6 +10,7 @@ class Place {
   final double? rating;
   final String? openHours;   // contoh: "08:00 - 21:00"
   final String? categoryName; // join dari tabel categories
+  final String? telephone;     // join dari tabel categories
 
   // Dihitung saat runtime, bukan dari DB
   double? distanceMeters;
@@ -27,6 +28,7 @@ class Place {
     this.openHours,
     this.categoryName,
     this.distanceMeters,
+    this.telephone,
   });
 
   factory Place.fromJson(Map<String, dynamic> json) {
@@ -41,6 +43,7 @@ class Place {
       photoUrl: json['photo_url'] as String?,
       rating: json['rating'] != null ? (json['rating'] as num).toDouble() : null,
       openHours: json['opening_hours'] as String?,
+      telephone: json['telephone'] as String?,
       // Ambil dari join: categories!inner(name)
       categoryName: json['categories'] != null
           ? (json['categories'] as Map<String, dynamic>)['name'] as String?
@@ -59,6 +62,7 @@ class Place {
         'photo_url': photoUrl,
         'rating': rating,
         'open_hours': openHours,
+        'telephone': telephone,
       };
 
   String get distanceText {
